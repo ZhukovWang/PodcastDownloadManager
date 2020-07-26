@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PodcastDownloadManager": {
+      "commandName": "Project",
+      "commandLineArgs": "-h"
+    }
+  }
+}
