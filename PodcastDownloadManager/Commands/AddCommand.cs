@@ -43,6 +43,7 @@ namespace PodcastDownloadManager.Commands
                 output.WriteLine($"Name: {podcastName}");
                 output.WriteLine($"URL: {url}");
             }
+
             return 0;
         }
     }

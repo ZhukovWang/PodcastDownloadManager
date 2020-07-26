@@ -1,8 +1,7 @@
 {
   "profiles": {
     "PodcastDownloadManager": {
-      "commandName": "Project",
-      "commandLineArgs": "remove PopCultureHappyHour"
+      "commandName": "Project"
     }
   }
 }

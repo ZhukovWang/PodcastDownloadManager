@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using NFlags;
 using NFlags.Commands;
+using PodcastDownloadManager.Podcast;
 
 namespace PodcastDownloadManager.Commands
 {
@@ -19,6 +20,14 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
+            output.WriteLine("Updating...");
+            Opml.UpdateAllPodcasts(out var outputList);
+
+            for (int i = 0; i < outputList.Count; i++)
+            {
+                output.WriteLine(outputList[i]);
+            }
+            output.WriteLine("pdlm was updated successfully!");
             return 0;
         }
     }

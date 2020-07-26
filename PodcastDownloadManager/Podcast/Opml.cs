@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
@@ -25,8 +26,9 @@ namespace PodcastDownloadManager.Podcast
          */
 
         public static string PodcastFileName = "podcasts.opml";
+        public static string DownloadFileName = "PodcastDownload.txt";
 
-        private static Dictionary<string, string> podcastsDictionary = new Dictionary<string, string>();
+        private static Dictionary<string, string> _podcastsDictionary = new Dictionary<string, string>();
 
         /// <summary>
         /// Create a new opml
@@ -59,7 +61,7 @@ namespace PodcastDownloadManager.Podcast
 
         private static void GetAllPodcast()
         {
-            podcastsDictionary = new Dictionary<string, string>();
+            _podcastsDictionary = new Dictionary<string, string>();
 
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.Load(PodcastFileName);
@@ -74,7 +76,7 @@ namespace PodcastDownloadManager.Podcast
             {
                 string podcastName = allPodcastNodes[i].Attributes["text"].Value;
                 string podcastUrl = allPodcastNodes[i].Attributes["xmlUrl"].Value;
-                podcastsDictionary.Add(podcastName, podcastUrl);
+                _podcastsDictionary.Add(podcastName, podcastUrl);
             }
         }
 
@@ -101,7 +103,7 @@ namespace PodcastDownloadManager.Podcast
             outline.SetAttribute("text", "feeds");
             body.AppendChild(outline);
 
-            foreach (KeyValuePair<string, string> podcast in podcastsDictionary)
+            foreach (KeyValuePair<string, string> podcast in _podcastsDictionary)
             {
                 XmlElement newPodcast = xmlDoc.CreateElement("outline");
                 newPodcast.SetAttribute("xmlUrl", podcast.Value);
@@ -130,9 +132,9 @@ namespace PodcastDownloadManager.Podcast
 
             string podcastName = GetPodcastName(url);
 
-            if (!podcastsDictionary.ContainsKey(podcastName))
+            if (!_podcastsDictionary.ContainsKey(podcastName))
             {
-                podcastsDictionary.Add(podcastName, url);
+                _podcastsDictionary.Add(podcastName, url);
 
                 SaveNewOpml();
             }
@@ -149,13 +151,13 @@ namespace PodcastDownloadManager.Podcast
         {
             GetAllPodcast();
 
-            if (!podcastsDictionary.ContainsKey(name))
+            if (!_podcastsDictionary.ContainsKey(name))
             {
                 return 1;
             }
             else
             {
-                podcastsDictionary.Remove(name);
+                _podcastsDictionary.Remove(name);
 
                 SaveNewOpml();
 
@@ -173,7 +175,7 @@ namespace PodcastDownloadManager.Podcast
 
             podcastList = new List<string>();
 
-            foreach (KeyValuePair<string, string> podcast in podcastsDictionary)
+            foreach (KeyValuePair<string, string> podcast in _podcastsDictionary)
             {
                 string showString = String.Empty;
 
@@ -187,11 +189,41 @@ namespace PodcastDownloadManager.Podcast
         {
             GetAllPodcast();
 
-            string url = podcastsDictionary[name];
+            string url = _podcastsDictionary[name];
 
-            Podcast podcast = new Podcast(url, name);
+            Podcast podcast = new Podcast(name, url);
 
             return podcast.GetPodcastDetail();
+        }
+
+        public static void UpdateAllPodcasts(out List<string> showString)
+        {
+            showString = new List<string>();
+
+            GetAllPodcast();
+
+            foreach (var podcast in _podcastsDictionary)
+            {
+                Podcast p = new Podcast(podcast.Key, podcast.Value);
+
+                p.GetPodcastNewlyRelease(ref showString);
+            }
+        }
+
+        public static void DownloadPodcastBeforeDate(DateTime dt)
+        {
+            GetAllPodcast();
+
+            FileStream fs = File.Create(DownloadFileName);
+
+            foreach (var podcast in _podcastsDictionary)
+            {
+                Podcast p = new Podcast(podcast.Key, podcast.Value, true);
+
+                p.BuildPodcastDownloadFile(dt, ref fs);
+            }
+
+            fs.Close();
         }
     }
 }
