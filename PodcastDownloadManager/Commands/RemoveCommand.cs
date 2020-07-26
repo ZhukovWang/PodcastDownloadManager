@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using NFlags;
 using NFlags.Commands;
+using PodcastDownloadManager.Podcast;
 
 namespace PodcastDownloadManager.Commands
 {
@@ -22,7 +24,18 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
-            output.WriteLine("Name: {0}", commandArgs.GetParameter<string>(PodcastName));
+            string podcastName = commandArgs.GetParameter<string>(PodcastName);
+
+            if (File.Exists(Opml.PodcastFileName))
+            {
+                int res = Opml.RemovePodcast(podcastName);
+
+                output.WriteLine(res == 0 ? "Had removed." : $"There is not podcast named {podcastName}.");
+            }
+            else
+            {
+                output.WriteLine("There is not a profile. Please at least add one podcast.");
+            }
             return 0;
         }
     }

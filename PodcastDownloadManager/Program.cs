@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using NFlags;
 using NFlags.Commands;
 
@@ -8,6 +9,12 @@ namespace PodcastDownloadManager
     {
         public static void Main(string[] args)
         {
+            string podcastsFileDirectory = "PodcastsFile";
+            if (!Directory.Exists(podcastsFileDirectory))
+            {
+                Directory.CreateDirectory(podcastsFileDirectory);
+            }
+
             Cli.Configure(ConfigureNFlags)
                 .Root(RootCommand.Configure)
                 .Run(args);

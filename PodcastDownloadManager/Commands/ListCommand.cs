@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using NFlags;
 using NFlags.Commands;
+using PodcastDownloadManager.Podcast;
 
 namespace PodcastDownloadManager.Commands
 {
@@ -19,6 +20,17 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
+            List<string> list;
+
+            Opml.ListPodcast(out list);
+
+            output.WriteLine("Podcasts:\n");
+
+            foreach (string s in list)
+            {
+                output.WriteLine(s);
+            }
+
             return 0;
         }
     }

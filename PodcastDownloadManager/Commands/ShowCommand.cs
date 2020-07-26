@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using NFlags;
 using NFlags.Commands;
+using PodcastDownloadManager.Podcast;
 
 namespace PodcastDownloadManager.Commands
 {
@@ -22,7 +23,11 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
-            output.WriteLine("Name: {0}", commandArgs.GetParameter<string>(PodcastName));
+            string podcastName = commandArgs.GetParameter<string>(PodcastName);
+
+            string detail = Opml.ShowPodcastDetail(podcastName);
+
+            output.WriteLine(detail);
             return 0;
         }
     }
