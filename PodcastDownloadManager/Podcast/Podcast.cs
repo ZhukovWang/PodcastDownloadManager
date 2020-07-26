@@ -110,9 +110,9 @@ namespace PodcastDownloadManager.Podcast
             newlyRelease.Add(showString);
         }
 
-        public void BuildPodcastDownloadFile(DateTime dateTime, ref FileStream fs)
+        public void BuildPodcastDownloadFile(DateTime dateTime, string downloadDirectory, bool isSimpleFile, ref FileStream fs)
         {
-            string downloadDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + "\\" + Program.podcastsDownloadDirectory;
+            string downloadDir = downloadDirectory;
 
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.Load(FileName);
@@ -137,13 +137,19 @@ namespace PodcastDownloadManager.Podcast
                     {
                         newlyReleasePubDate = dt.ToString("yyyy_MM_dd", DateTimeFormatInfo.InvariantInfo);
 
-                        string newlyReleaseTitle = nodeList[i].SelectSingleNode("title").InnerText.Trim().Replace(" ", "");
-                        string newlyReleaseDownloadUrl = nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
+                        string newlyReleaseTitle =
+                            nodeList[i].SelectSingleNode("title").InnerText.Trim().Replace(" ", "");
+                        string newlyReleaseDownloadUrl =
+                            nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
 
                         AddText(fs, $"{newlyReleaseDownloadUrl}\n");
-                        AddText(fs, $"\tdir={downloadDir}\n");
-                        string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}.mp3");
-                        AddText(fs, $"\tout={fileName}\n");
+
+                        if (!isSimpleFile)
+                        {
+                            AddText(fs, $"\tdir={downloadDir}\n");
+                            string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}.mp3");
+                            AddText(fs, $"\tout={fileName}\n");
+                        }
                     }
                 }
             }

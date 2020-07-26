@@ -210,17 +210,17 @@ namespace PodcastDownloadManager.Podcast
             }
         }
 
-        public static void DownloadPodcastBeforeDate(DateTime dt)
+        public static void DownloadPodcastBeforeDate(DateTime dt, string downloadFileDirectory, bool isSimpleFile)
         {
             GetAllPodcast();
 
-            FileStream fs = File.Create(DownloadFileName);
+            FileStream fs = File.Create(downloadFileDirectory + "\\" + DownloadFileName);
 
             foreach (var podcast in _podcastsDictionary)
             {
                 Podcast p = new Podcast(podcast.Key, podcast.Value, true);
 
-                p.BuildPodcastDownloadFile(dt, ref fs);
+                p.BuildPodcastDownloadFile(dt, downloadFileDirectory, isSimpleFile, ref fs);
             }
 
             fs.Close();

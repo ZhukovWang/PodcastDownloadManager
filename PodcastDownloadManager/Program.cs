@@ -8,18 +8,12 @@ namespace PodcastDownloadManager
     internal class Program
     {
         public static string podcastsFileDirectory = "PodcastsFile";
-        public static string podcastsDownloadDirectory = "Download";
 
         public static void Main(string[] args)
         {
             if (!Directory.Exists(podcastsFileDirectory))
             {
                 Directory.CreateDirectory(podcastsFileDirectory);
-            }
-
-            if (!Directory.Exists(podcastsDownloadDirectory))
-            {
-                Directory.CreateDirectory(podcastsDownloadDirectory);
             }
 
             Cli.Configure(ConfigureNFlags)

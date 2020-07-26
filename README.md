@@ -63,7 +63,7 @@ $ pdlm update
 
 ### download
 
-Download the podcast newly release before a specific date. Use [aria2](https://aria2.github.io/).
+Download the podcast newly release after a specific date. Use [aria2](https://aria2.github.io/).
 
 I know this is stupid, so when this have a gui, will change to a list can check download items.
 
