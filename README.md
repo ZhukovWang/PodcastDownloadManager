@@ -1,5 +1,7 @@
 # Podcast Download Manager
 
+![.NET Core](https://github.com/ZhukovWang/PodcastDownloadManager/workflows/.NET%20Core/badge.svg)
+
 Podcast Download Manager is a commandline podcast manager and provides commands for managing and downloading podcast.
 
 Allow add, remove, list, show, update and download podcast.
