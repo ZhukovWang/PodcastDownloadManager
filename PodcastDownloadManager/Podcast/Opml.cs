@@ -25,7 +25,7 @@ namespace PodcastDownloadManager.Podcast
             </opml>
          */
 
-        public static string PodcastFileName = "podcasts.opml";
+        public static string PodcastFileName = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + "\\podcasts.opml";
         public static string DownloadFileName = "PodcastDownload.txt";
 
         private static Dictionary<string, string> _podcastsDictionary = new Dictionary<string, string>();
@@ -214,7 +214,9 @@ namespace PodcastDownloadManager.Podcast
         {
             GetAllPodcast();
 
-            FileStream fs = File.Create(downloadFileDirectory + "\\" + DownloadFileName);
+            DownloadFileName = downloadFileDirectory + "\\" + "PodcastDownload.txt";
+
+            FileStream fs = File.Create(DownloadFileName);
 
             foreach (var podcast in _podcastsDictionary)
             {

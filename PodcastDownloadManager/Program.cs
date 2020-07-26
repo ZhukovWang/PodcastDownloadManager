@@ -7,7 +7,7 @@ namespace PodcastDownloadManager
 {
     internal class Program
     {
-        public static string podcastsFileDirectory = "PodcastsFile";
+        public static string podcastsFileDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + "\\PodcastsFile";
 
         public static void Main(string[] args)
         {
