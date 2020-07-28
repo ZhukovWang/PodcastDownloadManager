@@ -20,7 +20,7 @@ namespace PodcastDownloadManager.Podcast
         public Podcast(string url)
         {
             this.Url = url;
-            FileName = $"{Program.podcastsFileDirectory}/NewPodcast.xml";
+            FileName = $"{ProgramConfiguration.PodcastsFileDirectory}/NewPodcast.xml";
             Download(url);
             this.Name = GetPodcastName();
             File.Delete(FileName);
@@ -30,7 +30,7 @@ namespace PodcastDownloadManager.Podcast
         {
             this.Url = url;
             this.Name = name;
-            FileName = $"{Program.podcastsFileDirectory}/{name}.xml";
+            FileName = $"{ProgramConfiguration.PodcastsFileDirectory}/{name}.xml";
             if (!skipDownload)
             {
                 Download(url);
@@ -110,10 +110,8 @@ namespace PodcastDownloadManager.Podcast
             newlyRelease.Add(showString);
         }
 
-        public void BuildPodcastDownloadFile(DateTime dateTime, string downloadDirectory, bool isSimpleFile, ref FileStream fs)
+        public void BuildPodcastDownloadFile(DateTime dateTime, string downloadDirectory, bool isSimpleFile, string downloadProgram, ref FileStream fs)
         {
-            string downloadDir = downloadDirectory;
-
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.Load(FileName);
 
@@ -142,13 +140,24 @@ namespace PodcastDownloadManager.Podcast
                         string newlyReleaseDownloadUrl =
                             nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
 
-                        AddText(fs, $"{newlyReleaseDownloadUrl}\n");
-
-                        if (!isSimpleFile)
+                        if (isSimpleFile)
                         {
-                            AddText(fs, $"\tdir={downloadDir}\n");
+                            AddText(fs, $"{newlyReleaseDownloadUrl}\n");
+                        }
+                        else
+                        {
                             string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}.mp3");
-                            AddText(fs, $"\tout={fileName}\n");
+                            if (downloadProgram == ProgramConfiguration.Aria2Name)
+                            {
+                                AddText(fs, $"{newlyReleaseDownloadUrl}\n");
+                                AddText(fs, $"\tdir={downloadDirectory}\n");
+
+                                AddText(fs, $"\tout={fileName}\n");
+                            }
+                            else if (downloadProgram == ProgramConfiguration.IdmName)
+                            {
+                                AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{downloadDirectory}\" /f \"{fileName}\"\n");
+                            }
                         }
                     }
                 }

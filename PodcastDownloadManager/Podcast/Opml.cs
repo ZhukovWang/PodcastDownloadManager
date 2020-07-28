@@ -25,8 +25,8 @@ namespace PodcastDownloadManager.Podcast
             </opml>
          */
 
-        public static string PodcastFileName = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + "\\podcasts.opml";
-        public static string DownloadFileName = "PodcastDownload.txt";
+        public static string PodcastFileName = ProgramConfiguration.Local + "\\podcasts.opml";
+        public static string DownloadFileName = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + "\\PodcastDownload.txt";
 
         private static Dictionary<string, string> _podcastsDictionary = new Dictionary<string, string>();
 
@@ -210,7 +210,7 @@ namespace PodcastDownloadManager.Podcast
             }
         }
 
-        public static void DownloadPodcastBeforeDate(DateTime dt, string downloadFileDirectory, bool isSimpleFile)
+        public static void DownloadPodcastAfterDate(DateTime dt, string downloadFileDirectory, bool isSimpleFile, string downloadProgram)
         {
             GetAllPodcast();
 
@@ -222,7 +222,7 @@ namespace PodcastDownloadManager.Podcast
             {
                 Podcast p = new Podcast(podcast.Key, podcast.Value, true);
 
-                p.BuildPodcastDownloadFile(dt, downloadFileDirectory, isSimpleFile, ref fs);
+                p.BuildPodcastDownloadFile(dt, downloadFileDirectory, isSimpleFile, downloadProgram, ref fs);
             }
 
             fs.Close();

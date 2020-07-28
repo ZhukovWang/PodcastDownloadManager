@@ -7,13 +7,20 @@ namespace PodcastDownloadManager
 {
     internal class Program
     {
-        public static string podcastsFileDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + "\\PodcastsFile";
-
         public static void Main(string[] args)
         {
-            if (!Directory.Exists(podcastsFileDirectory))
+            if (!Directory.Exists(ProgramConfiguration.PodcastsFileDirectory))
             {
-                Directory.CreateDirectory(podcastsFileDirectory);
+                Directory.CreateDirectory(ProgramConfiguration.PodcastsFileDirectory);
+            }
+
+            if (File.Exists(ProgramConfiguration.ConfigFilePathName))
+            {
+                ProgramConfiguration.ReadConfig();
+            }
+            else
+            {
+                ProgramConfiguration.CreateConfig();
             }
 
             Cli.Configure(ConfigureNFlags)
