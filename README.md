@@ -94,7 +94,7 @@ Set configuration values. Can set `DownloadPodcastPath`, `DownloadProgram`, `Dow
 
 The config file can find in `PodcastDownloadManager\config.json`.
 
-If set `DownloadProgram`, `DownloadProgramPathName` MUST suitable.
+If set `DownloadProgram`, `DownloadProgramPathName` MUST be suitable.
 
 ```bash
 # set DownloadPodcastPath
