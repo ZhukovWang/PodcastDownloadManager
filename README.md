@@ -94,16 +94,23 @@ Set configuration values. Can set `DownloadPodcastPath`, `DownloadProgram`, `Dow
 
 The config file can find in `PodcastDownloadManager\config.json`.
 
+If set `DownloadProgram`, `DownloadProgramPathName` MUST suitable.
+
 ```bash
 # set DownloadPodcastPath
 $ pdlm config --download-path "path\to\download"
 # or
 $ pdlm config -p "path\to\download"
 
-# set DownloadProgram
+# set DownloadProgram to Aria2
 $ pdlm config --download-program "Aria2"
 # or
 $ pdlm config -dp "Aria2"
+
+# set DownloadProgram to IDM
+$ pdlm config --download-program "IDM"
+# or
+$ pdlm config -dp "IDM"
 
 # set DownloadProgramPathName
 $ pdlm config --download-program-path "path\to\download\program"
