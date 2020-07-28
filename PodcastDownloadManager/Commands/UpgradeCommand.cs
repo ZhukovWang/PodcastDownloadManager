@@ -11,7 +11,7 @@ namespace PodcastDownloadManager.Commands
     public static class UpgradeCommand
     {
         public const string Name = "upgrade";
-        public const string Description = "download the podcast newly release since last update.";
+        public const string Description = "Download the podcast newly release since last update.";
 
         public static void Configure(CommandConfigurator configurator)
         {

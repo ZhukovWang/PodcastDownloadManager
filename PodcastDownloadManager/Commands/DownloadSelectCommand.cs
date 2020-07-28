@@ -16,7 +16,7 @@ namespace PodcastDownloadManager.Commands
 
         private const string PodcastName = "Name";
 
-        private const string SelectIndex = "select";
+        private const string SelectIndex = "Select";
 
         public static void Configure(CommandConfigurator configurator)
         {

@@ -11,7 +11,7 @@ namespace PodcastDownloadManager.Commands
     public static class ConfigCommand
     {
         public const string Name = "config";
-        public const string Description = "Get or set configuration values.";
+        public const string Description = "Set configuration values.";
 
         private const string DownloadPodcastPath = "download-path";
         private const string DownloadProgram = "download-program";

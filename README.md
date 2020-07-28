@@ -4,7 +4,9 @@
 
 Podcast Download Manager is a commandline podcast manager and provides commands for managing and downloading podcast.
 
-Allow add, remove, list, show, update and download podcast.
+Allow add, remove, list, show, update, upgrade and download podcast.
+
+Support [Aria2](https://aria2.github.io/) and [Internet Download Manager](http://www.internetdownloadmanager.com/) automatic download.
 
 ## Build
 
@@ -19,7 +21,9 @@ $ dotnet build
 
 ### prepare
 
-Install [.Net Core runtime](https://dotnet.microsoft.com/) and [aria2](https://aria2.github.io/).
+Install [.Net Core runtime](https://dotnet.microsoft.com/).
+
+Install [Aria2](https://aria2.github.io/) or [Internet Download Manager](http://www.internetdownloadmanager.com/) for automatic download.
 
 ### add
 
@@ -61,14 +65,50 @@ Update the podcast newly release.
 $ pdlm update
 ```
 
-### download
+### upgrade
 
-Download the podcast newly release after a specific date. Use [aria2](https://aria2.github.io/).
-
-I know this is stupid, so when this have a gui, will change to a list can check download items.
+Download the podcast newly release since last update.
 
 ```bash
-$ pdlm download 20200701
+$ pdlm upgrade
+```
+
+### download
+
+Download the podcast specific release.
+
+```bash
+$ pdlm download list PodcastName # list all the PodcastName release
+1. title1
+2. title2
+...
+
+$ pdlm download select PodcastName 1;2 # download the PodcastName release no.1 and no.2
+```
+
+### config
+
+Set configuration values. Can set `DownloadPodcastPath`, `DownloadProgram`, `DownloadProgramPathName`.
+
+`DownloadProgram` only support [Aria2](https://aria2.github.io/) and [Internet Download Manager](http://www.internetdownloadmanager.com/).
+
+The config file can find in `PodcastDownloadManager\config.json`.
+
+```bash
+# set DownloadPodcastPath
+$ pdlm config --download-path "path\to\download"
+# or
+$ pdlm config -p "path\to\download"
+
+# set DownloadProgram
+$ pdlm config --download-program "Aria2"
+# or
+$ pdlm config -dp "Aria2"
+
+# set DownloadProgramPathName
+$ pdlm config --download-program-path "path\to\download\program"
+# or
+$ pdlm config -dpp "path\to\download\program"
 ```
 
 ## LICENSE
