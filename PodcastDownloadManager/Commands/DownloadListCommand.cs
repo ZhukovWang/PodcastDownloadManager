@@ -29,15 +29,22 @@ namespace PodcastDownloadManager.Commands
 
             List<string> outputList = new List<string>();
 
-            Opml.ListPodcastAllRelease(name, ref outputList);
+            int res = Opml.ListPodcastAllRelease(name, ref outputList);
 
-            for (var i = 0; i < outputList.Count; i++)
+            if (res == 0)
             {
-                output.Write((i + 1).ToString() + ". ");
-                output.Write(outputList[i]);
-            }
+                for (var i = 0; i < outputList.Count; i++)
+                {
+                    output.Write((i + 1).ToString() + ". ");
+                    output.Write(outputList[i]);
+                }
 
-            output.WriteLine("Done.");
+                output.WriteLine("Done.");
+            }
+            else
+            {
+                output.WriteLine(outputList[0]);
+            }
             return 0;
         }
     }

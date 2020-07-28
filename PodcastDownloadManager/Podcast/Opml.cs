@@ -225,15 +225,26 @@ namespace PodcastDownloadManager.Podcast
             fs.Close();
         }
 
-        public static void ListPodcastAllRelease(string name, ref List<string> outputString)
+        public static int ListPodcastAllRelease(string name, ref List<string> outputString)
         {
             GetAllPodcast();
+            string url;
 
-            string url = _podcastsDictionary[name];
+            try
+            {
+                url = _podcastsDictionary[name];
+            }
+            catch
+            {
+                outputString.Add("Error. Input of Name does not contain in the library.");
+                return -1;
+            }
 
             Podcast podcast = new Podcast(name, url);
 
             podcast.GetPodcastAllReleaseDetail(ref outputString);
+
+            return 0;
         }
 
         public static void DownloadPodcastSelectRelease(string name, int[] selectIndex, string downloadFileDirectory, bool isSimpleFile, string downloadProgram)
