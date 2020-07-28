@@ -102,9 +102,13 @@ namespace PodcastDownloadManager.Podcast
             client.DownloadFile(this.Url, $"{FileName}.tmp");
 
             //get last update time
-            DateTime lastUpdateDateTime = File.GetLastWriteTimeUtc(FileName);
+            DateTime lastUpdateDateTime = DateTime.Now;
+            if (File.Exists(FileName))
+            {
+                lastUpdateDateTime = File.GetLastWriteTimeUtc(FileName);
+                File.Delete($"{FileName}");
+            }
 
-            File.Delete($"{FileName}");
             File.Copy($"{FileName}.tmp", FileName, true);
             File.Delete($"{FileName}.tmp");
 
