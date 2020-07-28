@@ -9,19 +9,7 @@ namespace PodcastDownloadManager
     {
         public static void Main(string[] args)
         {
-            if (!Directory.Exists(ProgramConfiguration.PodcastsFileDirectory))
-            {
-                Directory.CreateDirectory(ProgramConfiguration.PodcastsFileDirectory);
-            }
-
-            if (File.Exists(ProgramConfiguration.ConfigFilePathName))
-            {
-                ProgramConfiguration.ReadConfig();
-            }
-            else
-            {
-                ProgramConfiguration.CreateConfig();
-            }
+            ProgramLoaded();
 
             Cli.Configure(ConfigureNFlags)
                 .Root(RootCommand.Configure)
@@ -36,6 +24,23 @@ namespace PodcastDownloadManager
                 .SetDialect(Dialect.Gnu)
                 .SetOutput(Output.Console)
                 .ConfigureVersion(vc => vc.Enable());
+        }
+
+        private static void ProgramLoaded()
+        {
+            if (!Directory.Exists(ProgramConfiguration.PodcastsFileDirectory))
+            {
+                Directory.CreateDirectory(ProgramConfiguration.PodcastsFileDirectory);
+            }
+
+            if (File.Exists(ProgramConfiguration.ConfigFilePathName))
+            {
+                ProgramConfiguration.ReadConfig();
+            }
+            else
+            {
+                ProgramConfiguration.CreateConfig();
+            }
         }
     }
 }

@@ -24,7 +24,7 @@ namespace PodcastDownloadManager.Commands
             configurator
                 .RegisterParameter(Date, "Release will be downloaded after the date.", "20200701")
                 .RegisterFlag(SimpleFile, "s", "create a simple file just have download url, could use to other download software. And not automatic download.", false)
-                .RegisterOption(DownloadDirectory, "d", "download configure and download file direction.", ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath)
+                .RegisterOption(DownloadDirectory, "d", "download file directory.", ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath)
                 .SetExecute(Execute);
         }
 

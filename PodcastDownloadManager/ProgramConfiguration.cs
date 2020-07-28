@@ -53,5 +53,16 @@ namespace PodcastDownloadManager
             var readOnlySpan = new ReadOnlySpan<byte>(jsonUtf8Bytes);
             DownloadConfigurations = JsonSerializer.Deserialize<DownloadConfiguration>(readOnlySpan, options);
         }
+
+        public static void SaveConfig()
+        {
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+
+            var jsonUtf8Bytes = JsonSerializer.SerializeToUtf8Bytes(DownloadConfigurations, options);
+            File.WriteAllBytes(ConfigFilePathName, jsonUtf8Bytes);
+        }
     }
 }
