@@ -185,8 +185,15 @@ namespace PodcastDownloadManager.Podcast
         public static string ShowPodcastDetail(string name)
         {
             GetAllPodcast();
-
-            string url = _podcastsDictionary[name];
+            string url;
+            try
+            {
+                url = _podcastsDictionary[name];
+            }
+            catch
+            {
+                return "Error.Input of Name does not contain in the library.";
+            }
 
             Podcast podcast = new Podcast(name, url);
 
