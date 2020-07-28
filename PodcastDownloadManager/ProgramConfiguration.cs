@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 
@@ -16,13 +17,41 @@ namespace PodcastDownloadManager
 
     internal static class ProgramConfiguration
     {
+        /// <summary>
+        /// pdlm configurations
+        /// </summary>
         public static DownloadConfiguration DownloadConfigurations = new DownloadConfiguration();
 
+        /// <summary>
+        /// pdlm location
+        /// </summary>
         public static readonly string Local =
-            Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
+        /// <summary>
+        /// config file path
+        /// </summary>
         public static string ConfigFilePathName = Local + "\\config.json";
+
+        /// <summary>
+        /// podcast xml saved directory
+        /// </summary>
         public static string PodcastsFileDirectory = Local + "\\PodcastsFile";
+
+        /// <summary>
+        /// podcast newly release download info file
+        /// </summary>
+        public static readonly string PodcastNewlyReleaseInfo = Local + "\\NewlyReleaseInfo.txt";
+
+        /// <summary>
+        /// all podcast info file
+        /// </summary>
+        public static string PodcastFileName = Local + "\\podcasts.opml";
+
+        /// <summary>
+        /// podcast download info file
+        /// </summary>
+        public static string DownloadFileName = DownloadConfigurations.DownloadPodcastPath + "\\PodcastDownload.txt";
 
         public const string Aria2Name = "Aria2";
         public const string IdmName = "IDM";

@@ -25,9 +25,6 @@ namespace PodcastDownloadManager.Podcast
             </opml>
          */
 
-        public static string PodcastFileName = ProgramConfiguration.Local + "\\podcasts.opml";
-        public static string DownloadFileName = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + "\\PodcastDownload.txt";
-
         private static Dictionary<string, string> _podcastsDictionary = new Dictionary<string, string>();
 
         /// <summary>
@@ -56,7 +53,7 @@ namespace PodcastDownloadManager.Podcast
             outline.SetAttribute("text", "feeds");
             body.AppendChild(outline);
 
-            xmlDoc.Save(PodcastFileName);
+            xmlDoc.Save(ProgramConfiguration.PodcastFileName);
         }
 
         private static void GetAllPodcast()
@@ -64,7 +61,7 @@ namespace PodcastDownloadManager.Podcast
             _podcastsDictionary = new Dictionary<string, string>();
 
             XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(PodcastFileName);
+            xmlDoc.Load(ProgramConfiguration.PodcastFileName);
 
             XmlElement root = xmlDoc.DocumentElement;
 
@@ -111,7 +108,7 @@ namespace PodcastDownloadManager.Podcast
                 outline.AppendChild(newPodcast);
             }
 
-            xmlDoc.Save(PodcastFileName);
+            xmlDoc.Save(ProgramConfiguration.PodcastFileName);
         }
 
         private static string GetPodcastName(string url)
@@ -214,9 +211,9 @@ namespace PodcastDownloadManager.Podcast
         {
             GetAllPodcast();
 
-            DownloadFileName = downloadFileDirectory + "\\" + "PodcastDownload.txt";
+            ProgramConfiguration.DownloadFileName = downloadFileDirectory + "\\" + "PodcastDownload.txt";
 
-            FileStream fs = File.Create(DownloadFileName);
+            FileStream fs = File.Create(ProgramConfiguration.DownloadFileName);
 
             foreach (var podcast in _podcastsDictionary)
             {

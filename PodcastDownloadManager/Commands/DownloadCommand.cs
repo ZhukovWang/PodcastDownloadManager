@@ -52,11 +52,11 @@ namespace PodcastDownloadManager.Commands
 
                 if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == ProgramConfiguration.Aria2Name)
                 {
-                    DownloadAria2(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, output);
+                    DownloadAria2(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.DownloadFileName, output);
                 }
                 else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == ProgramConfiguration.IdmName)
                 {
-                    DownloadIdm(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, output);
+                    DownloadIdm(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.DownloadFileName, output);
                 }
 
                 output.WriteLine("Done.");
@@ -64,14 +64,14 @@ namespace PodcastDownloadManager.Commands
             return 0;
         }
 
-        private static void DownloadAria2(string programPath, IOutput output)
+        public static void DownloadAria2(string programPath, string downloadInfoFile, IOutput output)
         {
             var process = new Process()
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = programPath,
-                    Arguments = $"-i \"{Opml.DownloadFileName}\"",
+                    Arguments = $"-i \"{downloadInfoFile}\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -94,9 +94,9 @@ namespace PodcastDownloadManager.Commands
             process.Close();
         }
 
-        private static void DownloadIdm(string programPath, IOutput output)
+        public static void DownloadIdm(string programPath, string downloadInfoFile, IOutput output)
         {
-            string[] downloadCommandStrings = File.ReadAllLines(Opml.DownloadFileName);
+            string[] downloadCommandStrings = File.ReadAllLines(downloadInfoFile);
 
             foreach (string commandString in downloadCommandStrings)
             {

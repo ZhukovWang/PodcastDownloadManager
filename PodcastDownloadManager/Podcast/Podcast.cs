@@ -119,6 +119,8 @@ namespace PodcastDownloadManager.Podcast
 
             XmlNode channel = root.SelectSingleNode("channel");
 
+            string title = channel.SelectSingleNode("title").InnerText;
+
             XmlNodeList nodeList = channel.ChildNodes;
 
             for (int i = 0; i < nodeList.Count; i++)
@@ -137,6 +139,27 @@ namespace PodcastDownloadManager.Podcast
                         string showString = $"* {this.Name} - {newlyReleaseTitle} - {newlyReleasePubDate}";
 
                         newlyRelease.Add(showString);
+
+                        newlyReleasePubDate = dt.ToString("yyyy_MM_dd", DateTimeFormatInfo.InvariantInfo);
+
+                        FileStream fs = File.Open(ProgramConfiguration.PodcastNewlyReleaseInfo, FileMode.CreateNew);
+
+                        newlyReleaseTitle =
+                            nodeList[i].SelectSingleNode("title").InnerText.Trim().Replace(" ", "");
+                        string newlyReleaseDownloadUrl =
+                            nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
+
+                        string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}.mp3");
+                        if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == ProgramConfiguration.Aria2Name)
+                        {
+                            AddText(fs, $"{newlyReleaseDownloadUrl}\n");
+                            AddText(fs, $"\tdir={ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath}\n");
+                            AddText(fs, $"\tout={fileName}\n");
+                        }
+                        else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == ProgramConfiguration.IdmName)
+                        {
+                            AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath}\" /f \"{fileName}\"\n");
+                        }
                     }
                 }
             }
@@ -183,7 +206,6 @@ namespace PodcastDownloadManager.Podcast
                             {
                                 AddText(fs, $"{newlyReleaseDownloadUrl}\n");
                                 AddText(fs, $"\tdir={downloadDirectory}\n");
-
                                 AddText(fs, $"\tout={fileName}\n");
                             }
                             else if (downloadProgram == ProgramConfiguration.IdmName)

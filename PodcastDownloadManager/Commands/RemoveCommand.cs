@@ -26,7 +26,7 @@ namespace PodcastDownloadManager.Commands
         {
             string podcastName = commandArgs.GetParameter<string>(PodcastName);
 
-            if (File.Exists(Opml.PodcastFileName))
+            if (File.Exists(ProgramConfiguration.PodcastFileName))
             {
                 int res = Opml.RemovePodcast(podcastName);
 

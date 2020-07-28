@@ -25,7 +25,7 @@ namespace PodcastDownloadManager.Commands
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
             string url = commandArgs.GetParameter<string>(PodcastUrl);
-            if (File.Exists(Opml.PodcastFileName))
+            if (File.Exists(ProgramConfiguration.PodcastFileName))
             {
                 output.WriteLine("Adding...");
                 string podcastName = Opml.AddPodcast(url);
