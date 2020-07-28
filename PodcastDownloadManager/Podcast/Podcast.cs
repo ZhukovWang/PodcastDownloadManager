@@ -149,7 +149,13 @@ namespace PodcastDownloadManager.Podcast
                         string newlyReleaseDownloadUrl =
                             nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
 
-                        string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}.mp3");
+                        string fileExtension = ".mp3";
+                        if (newlyReleaseDownloadUrl.Contains(".m4a"))
+                        {
+                            fileExtension = ".m4a";
+                        }
+
+                        string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}{fileExtension}");
                         if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == ProgramConfiguration.Aria2Name)
                         {
                             AddText(fs, $"{newlyReleaseDownloadUrl}\n");
@@ -201,7 +207,13 @@ namespace PodcastDownloadManager.Podcast
                         }
                         else
                         {
-                            string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}.mp3");
+                            string fileExtension = ".mp3";
+                            if (newlyReleaseDownloadUrl.Contains(".m4a"))
+                            {
+                                fileExtension = ".m4a";
+                            }
+
+                            string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}{fileExtension}");
                             if (downloadProgram == ProgramConfiguration.Aria2Name)
                             {
                                 AddText(fs, $"{newlyReleaseDownloadUrl}\n");
