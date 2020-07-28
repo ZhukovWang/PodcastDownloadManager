@@ -33,17 +33,36 @@ namespace PodcastDownloadManager.Commands
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
             string podcastsDownloadDirectory = commandArgs.GetOption<string>(DownloadDirectory);
-            bool isSimpleFile = commandArgs.GetFlag(SimpleFile);
-
-            output.WriteLine("Building downloading file...");
 
             if (!Directory.Exists(podcastsDownloadDirectory))
             {
-                Directory.CreateDirectory(podcastsDownloadDirectory);
+                try
+                {
+                    Directory.CreateDirectory(podcastsDownloadDirectory);
+                }
+                catch
+                {
+                    output.WriteLine("Error. Input of 'dir' is illegal.");
+                    return 0;
+                }
             }
 
-            string url = commandArgs.GetParameter<string>(Date);
-            DateTime dt = DateTime.ParseExact(url, "yyyyMMdd", new CultureInfo("en-US"));
+            bool isSimpleFile = commandArgs.GetFlag(SimpleFile);
+
+            string date = commandArgs.GetParameter<string>(Date);
+            DateTime dt;
+            try
+            {
+                dt = DateTime.ParseExact(date, "yyyyMMdd", new CultureInfo("en-US"));
+            }
+            catch
+            {
+                output.WriteLine("Error. Input of 'date' is illegal.");
+                return 0;
+            }
+
+            output.WriteLine("Building downloading file...");
+
             Opml.DownloadPodcastAfterDate(dt, podcastsDownloadDirectory, isSimpleFile, ProgramConfiguration.DownloadConfigurations.DownloadProgram);
 
             output.WriteLine("Building done");
