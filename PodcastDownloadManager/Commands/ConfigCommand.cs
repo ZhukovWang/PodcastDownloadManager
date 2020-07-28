@@ -28,12 +28,63 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
-            ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath =
-                commandArgs.GetOption<string>(DownloadPodcastPath);
-            ProgramConfiguration.DownloadConfigurations.DownloadProgram =
-                commandArgs.GetOption<string>(DownloadProgram);
-            ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName =
-                commandArgs.GetOption<string>(DownloadProgramPath);
+            string downloadPodcastPath = commandArgs.GetOption<string>(DownloadPodcastPath);
+            string downloadProgram = commandArgs.GetOption<string>(DownloadProgram);
+            string downloadProgramPath = commandArgs.GetOption<string>(DownloadProgramPath);
+
+            if (Directory.Exists(downloadPodcastPath))
+            {
+                ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath = downloadPodcastPath;
+            }
+            else
+            {
+                output.WriteLine("Error. Input of 'download-path' does not exist.");
+            }
+
+            if (downloadProgram == DownloadTools.IdmName || downloadProgram == DownloadTools.Aria2Name)
+            {
+                ProgramConfiguration.DownloadConfigurations.DownloadProgram = downloadProgram;
+            }
+            else
+            {
+                output.WriteLine($"Error. Input of 'download-program' is illegal. Please input {DownloadTools.Aria2Name} or {DownloadTools.IdmName}.");
+            }
+
+            if (System.Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                if (!downloadProgramPath.Contains(".exe"))
+                {
+                    downloadProgramPath += ".exe";
+                }
+            }
+
+            if (File.Exists(downloadProgramPath))
+            {
+                ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName = downloadProgramPath;
+            }
+            else
+            {
+                bool isValid = false;
+                var values = System.Environment.GetEnvironmentVariable("PATH");
+                foreach (var path in values.Split(Path.PathSeparator))
+                {
+                    var fullPath = Path.Combine(path, downloadProgramPath);
+                    if (File.Exists(fullPath))
+                    {
+                        isValid = true;
+                        break;
+                    }
+                }
+
+                if (isValid)
+                {
+                    ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName = downloadProgramPath;
+                }
+                else
+                {
+                    output.WriteLine("Error. Input of 'download-program-path' does not exist.");
+                }
+            }
 
             ProgramConfiguration.SaveConfig();
 
