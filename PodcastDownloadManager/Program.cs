@@ -2,6 +2,7 @@
 using System.IO;
 using NFlags;
 using NFlags.Commands;
+using PodcastDownloadManager.Commands;
 
 namespace PodcastDownloadManager
 {

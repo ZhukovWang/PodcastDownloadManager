@@ -32,13 +32,13 @@ namespace PodcastDownloadManager.Commands
 
             if (File.Exists(ProgramConfiguration.PodcastNewlyReleaseInfo))
             {
-                if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == ProgramConfiguration.Aria2Name)
+                if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.Aria2Name)
                 {
-                    DownloadCommand.DownloadAria2(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.PodcastNewlyReleaseInfo, output);
+                    DownloadTools.DownloadAria2(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.PodcastNewlyReleaseInfo, output);
                 }
-                else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == ProgramConfiguration.IdmName)
+                else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.IdmName)
                 {
-                    DownloadCommand.DownloadIdm(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.PodcastNewlyReleaseInfo, output);
+                    DownloadTools.DownloadIdm(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.PodcastNewlyReleaseInfo, output);
                 }
                 File.Delete(ProgramConfiguration.PodcastNewlyReleaseInfo);
                 output.WriteLine("Done.");

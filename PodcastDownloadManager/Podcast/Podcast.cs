@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -156,13 +157,13 @@ namespace PodcastDownloadManager.Podcast
                         }
 
                         string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}{fileExtension}");
-                        if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == ProgramConfiguration.Aria2Name)
+                        if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.Aria2Name)
                         {
                             AddText(fs, $"{newlyReleaseDownloadUrl}\n");
                             AddText(fs, $"\tdir={ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath}\n");
                             AddText(fs, $"\tout={fileName}\n");
                         }
-                        else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == ProgramConfiguration.IdmName)
+                        else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.IdmName)
                         {
                             AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath}\" /f \"{fileName}\"\n");
                         }
@@ -214,13 +215,105 @@ namespace PodcastDownloadManager.Podcast
                             }
 
                             string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}{fileExtension}");
-                            if (downloadProgram == ProgramConfiguration.Aria2Name)
+                            if (downloadProgram == DownloadTools.Aria2Name)
                             {
                                 AddText(fs, $"{newlyReleaseDownloadUrl}\n");
                                 AddText(fs, $"\tdir={downloadDirectory}\n");
                                 AddText(fs, $"\tout={fileName}\n");
                             }
-                            else if (downloadProgram == ProgramConfiguration.IdmName)
+                            else if (downloadProgram == DownloadTools.IdmName)
+                            {
+                                AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{downloadDirectory}\" /f \"{fileName}\"\n");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public void GetPodcastAllReleaseDetail(ref List<string> outputStrings)
+        {
+            XmlDocument xmlDoc = new XmlDocument();
+            xmlDoc.Load(FileName);
+
+            var root = xmlDoc.DocumentElement;
+
+            XmlNode channel = root.SelectSingleNode("channel");
+
+            XmlNodeList nodeList = channel.ChildNodes;
+
+            for (int i = 0; i < nodeList.Count; i++)
+            {
+                if (nodeList[i].Name == "item")
+                {
+                    string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
+                    DateTime dt = DateTime.Parse(newlyReleasePubDate);
+
+                    string newlyReleaseTitle =
+                        nodeList[i].SelectSingleNode("title").InnerText.Trim();
+
+                    newlyReleasePubDate = dt.ToString("G");
+
+                    string showString = $"{newlyReleaseTitle} - {newlyReleasePubDate}\n";
+
+                    outputStrings.Add(showString);
+                }
+            }
+        }
+
+        public void DownloadSelectIndexRelease(int[] selectIndex, string downloadDirectory, bool isSimpleFile, string downloadProgram, ref FileStream fs)
+        {
+            XmlDocument xmlDoc = new XmlDocument();
+            xmlDoc.Load(FileName);
+
+            var root = xmlDoc.DocumentElement;
+
+            XmlNode channel = root.SelectSingleNode("channel");
+
+            string title = channel.SelectSingleNode("title").InnerText;
+
+            XmlNodeList nodeList = channel.ChildNodes;
+
+            int index = 0;
+
+            for (int i = 0; i < nodeList.Count; i++)
+            {
+                if (nodeList[i].Name == "item")
+                {
+                    index++;
+                    if (selectIndex.Contains(index))
+                    {
+                        string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
+                        DateTime dt = DateTime.Now;
+                        dt = DateTime.Parse(newlyReleasePubDate);
+
+                        newlyReleasePubDate = dt.ToString("yyyy_MM_dd", DateTimeFormatInfo.InvariantInfo);
+
+                        string newlyReleaseTitle =
+                            nodeList[i].SelectSingleNode("title").InnerText.Trim();
+                        string newlyReleaseDownloadUrl =
+                            nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
+
+                        if (isSimpleFile)
+                        {
+                            AddText(fs, $"{newlyReleaseDownloadUrl}\n");
+                        }
+                        else
+                        {
+                            string fileExtension = ".mp3";
+                            if (newlyReleaseDownloadUrl.Contains(".m4a"))
+                            {
+                                fileExtension = ".m4a";
+                            }
+
+                            string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}{fileExtension}");
+                            if (downloadProgram == DownloadTools.Aria2Name)
+                            {
+                                AddText(fs, $"{newlyReleaseDownloadUrl}\n");
+                                AddText(fs, $"\tdir={downloadDirectory}\n");
+                                AddText(fs, $"\tout={fileName}\n");
+                            }
+                            else if (downloadProgram == DownloadTools.IdmName)
                             {
                                 AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{downloadDirectory}\" /f \"{fileName}\"\n");
                             }

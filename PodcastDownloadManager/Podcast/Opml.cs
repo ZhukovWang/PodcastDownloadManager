@@ -224,5 +224,33 @@ namespace PodcastDownloadManager.Podcast
 
             fs.Close();
         }
+
+        public static void ListPodcastAllRelease(string name, ref List<string> outputString)
+        {
+            GetAllPodcast();
+
+            string url = _podcastsDictionary[name];
+
+            Podcast podcast = new Podcast(name, url);
+
+            podcast.GetPodcastAllReleaseDetail(ref outputString);
+        }
+
+        public static void DownloadPodcastSelectRelease(string name, int[] selectIndex, string downloadFileDirectory, bool isSimpleFile, string downloadProgram)
+        {
+            GetAllPodcast();
+
+            string url = _podcastsDictionary[name];
+
+            Podcast podcast = new Podcast(name, url);
+
+            ProgramConfiguration.DownloadFileName = downloadFileDirectory + "\\" + "PodcastDownload.txt";
+
+            FileStream fs = File.Create(ProgramConfiguration.DownloadFileName);
+
+            podcast.DownloadSelectIndexRelease(selectIndex, downloadFileDirectory, isSimpleFile, downloadProgram, ref fs);
+
+            fs.Close();
+        }
     }
 }

@@ -21,7 +21,7 @@ namespace PodcastDownloadManager.Commands
         {
             configurator
                 .RegisterOption(DownloadPodcastPath, "p", "The downloaded podcast saved path.", ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath)
-                .RegisterOption(DownloadProgram, "dp", $"The downloaded program name, now support are {ProgramConfiguration.Aria2Name} and {ProgramConfiguration.IdmName}.", ProgramConfiguration.DownloadConfigurations.DownloadProgram)
+                .RegisterOption(DownloadProgram, "dp", $"The downloaded program name, now support are {DownloadTools.Aria2Name} and {DownloadTools.IdmName}.", ProgramConfiguration.DownloadConfigurations.DownloadProgram)
                 .RegisterOption(DownloadProgramPath, "dpp", $"The downloaded program path.", ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName)
                 .SetExecute(Execute);
         }

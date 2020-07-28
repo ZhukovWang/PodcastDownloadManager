@@ -53,13 +53,10 @@ namespace PodcastDownloadManager
         /// </summary>
         public static string DownloadFileName = DownloadConfigurations.DownloadPodcastPath + "\\PodcastDownload.txt";
 
-        public const string Aria2Name = "Aria2";
-        public const string IdmName = "IDM";
-
         public static void CreateConfig()
         {
             DownloadConfigurations.DownloadPodcastPath = Local + "\\Download";
-            DownloadConfigurations.DownloadProgram = ProgramConfiguration.Aria2Name;
+            DownloadConfigurations.DownloadProgram = DownloadTools.Aria2Name;
             DownloadConfigurations.DownloadProgramPathName = "aria2c";
 
             var options = new JsonSerializerOptions

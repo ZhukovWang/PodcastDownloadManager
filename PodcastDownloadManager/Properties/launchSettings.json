@@ -1,7 +1,8 @@
 {
   "profiles": {
     "PodcastDownloadManager": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "download select AllSongsConsidered 1;2;3"
     }
   }
 }

@@ -23,8 +23,10 @@ namespace PodcastDownloadManager.Commands
         {
             configurator
                 .RegisterParameter(Date, "Release will be downloaded after the date.", "20200701")
-                .RegisterFlag(SimpleFile, "s", "create a simple file just have download url, could use to other download software. And not automatic download.", false)
-                .RegisterOption(DownloadDirectory, "d", "download file directory.", ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath)
+                .RegisterFlag(SimpleFile, "s", "Create a simple file just have download url, could use to other download software. And not automatic download.", false)
+                .RegisterOption(DownloadDirectory, "d", "Download file directory.", ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath)
+                .RegisterCommand(DownloadListCommand.Name, DownloadListCommand.Description, DownloadListCommand.Configure)
+                .RegisterCommand(DownloadSelectCommand.Name, DownloadSelectCommand.Description, DownloadSelectCommand.Configure)
                 .SetExecute(Execute);
         }
 
@@ -50,108 +52,18 @@ namespace PodcastDownloadManager.Commands
             {
                 output.WriteLine("Downloading...");
 
-                if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == ProgramConfiguration.Aria2Name)
+                if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.Aria2Name)
                 {
-                    DownloadAria2(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.DownloadFileName, output);
+                    DownloadTools.DownloadAria2(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.DownloadFileName, output);
                 }
-                else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == ProgramConfiguration.IdmName)
+                else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.IdmName)
                 {
-                    DownloadIdm(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.DownloadFileName, output);
+                    DownloadTools.DownloadIdm(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.DownloadFileName, output);
                 }
 
                 output.WriteLine("Done.");
             }
             return 0;
-        }
-
-        public static void DownloadAria2(string programPath, string downloadInfoFile, IOutput output)
-        {
-            var process = new Process()
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = programPath,
-                    Arguments = $"-i \"{downloadInfoFile}\"",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-
-            process.EnableRaisingEvents = true;
-
-            process.Exited += new EventHandler(((sender, args) => output.WriteLine("Done.")));
-            process.OutputDataReceived += new DataReceivedEventHandler(((sender, args) => output.WriteLine(args.Data)));
-            process.ErrorDataReceived += new DataReceivedEventHandler(((sender, args) => output.WriteLine(args.Data)));
-
-            process.Start();
-
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-
-            process.WaitForExit();
-            process.Close();
-        }
-
-        public static void DownloadIdm(string programPath, string downloadInfoFile, IOutput output)
-        {
-            string[] downloadCommandStrings = File.ReadAllLines(downloadInfoFile);
-
-            foreach (string commandString in downloadCommandStrings)
-            {
-                var processAddDownload = new Process()
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = programPath,
-                        Arguments = $"{commandString}",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
-
-                processAddDownload.EnableRaisingEvents = true;
-
-                processAddDownload.OutputDataReceived += new DataReceivedEventHandler(((sender, args) => output.WriteLine(args.Data)));
-                processAddDownload.ErrorDataReceived += new DataReceivedEventHandler(((sender, args) => output.WriteLine(args.Data)));
-
-                processAddDownload.Start();
-
-                processAddDownload.BeginOutputReadLine();
-                processAddDownload.BeginErrorReadLine();
-
-                processAddDownload.WaitForExit();
-                processAddDownload.Close();
-            }
-
-            var processStartDownload = new Process()
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = programPath,
-                    Arguments = "/s",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-
-            processStartDownload.EnableRaisingEvents = true;
-
-            processStartDownload.OutputDataReceived += new DataReceivedEventHandler(((sender, args) => output.WriteLine(args.Data)));
-            processStartDownload.ErrorDataReceived += new DataReceivedEventHandler(((sender, args) => output.WriteLine(args.Data)));
-
-            processStartDownload.Start();
-
-            processStartDownload.BeginOutputReadLine();
-            processStartDownload.BeginErrorReadLine();
-
-            processStartDownload.WaitForExit();
-            processStartDownload.Close();
         }
     }
 }
