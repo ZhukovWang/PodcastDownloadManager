@@ -145,7 +145,7 @@ namespace PodcastDownloadManager.Podcast
                         FileStream fs = File.Open(ProgramConfiguration.PodcastNewlyReleaseInfo, FileMode.CreateNew);
 
                         newlyReleaseTitle =
-                            nodeList[i].SelectSingleNode("title").InnerText.Trim().Replace(" ", "");
+                            nodeList[i].SelectSingleNode("title").InnerText.Trim();
                         string newlyReleaseDownloadUrl =
                             nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
 
@@ -191,7 +191,7 @@ namespace PodcastDownloadManager.Podcast
                         newlyReleasePubDate = dt.ToString("yyyy_MM_dd", DateTimeFormatInfo.InvariantInfo);
 
                         string newlyReleaseTitle =
-                            nodeList[i].SelectSingleNode("title").InnerText.Trim().Replace(" ", "");
+                            nodeList[i].SelectSingleNode("title").InnerText.Trim();
                         string newlyReleaseDownloadUrl =
                             nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
 
