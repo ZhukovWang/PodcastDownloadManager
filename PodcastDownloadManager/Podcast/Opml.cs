@@ -247,11 +247,19 @@ namespace PodcastDownloadManager.Podcast
             return 0;
         }
 
-        public static void DownloadPodcastSelectRelease(string name, int[] selectIndex, string downloadFileDirectory, bool isSimpleFile, string downloadProgram)
+        public static int DownloadPodcastSelectRelease(string name, int[] selectIndex, string downloadFileDirectory, bool isSimpleFile, string downloadProgram)
         {
             GetAllPodcast();
 
-            string url = _podcastsDictionary[name];
+            string url;
+            try
+            {
+                url = _podcastsDictionary[name];
+            }
+            catch
+            {
+                return -1;
+            }
 
             Podcast podcast = new Podcast(name, url);
 
@@ -262,6 +270,8 @@ namespace PodcastDownloadManager.Podcast
             podcast.DownloadSelectIndexRelease(selectIndex, downloadFileDirectory, isSimpleFile, downloadProgram, ref fs);
 
             fs.Close();
+
+            return 0;
         }
     }
 }

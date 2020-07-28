@@ -31,7 +31,7 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
-            int[] selectIndexs = commandArgs.GetParameter<int[]>(SelectIndex);
+            int[] selectIndex = commandArgs.GetParameter<int[]>(SelectIndex);
             string name = commandArgs.GetParameter<string>(PodcastName);
 
             output.WriteLine("Building downloading file...");
@@ -41,9 +41,15 @@ namespace PodcastDownloadManager.Commands
                 Directory.CreateDirectory(ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath);
             }
 
-            Opml.DownloadPodcastSelectRelease(name, selectIndexs,
+            int res = Opml.DownloadPodcastSelectRelease(name, selectIndex,
                 ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath, false,
                 ProgramConfiguration.DownloadConfigurations.DownloadProgram);
+
+            if (res != 0)
+            {
+                output.WriteLine("Error. Input of Name does not contain in the library.");
+                return 0;
+            }
 
             output.WriteLine("Building done");
 
