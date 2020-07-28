@@ -1,8 +1,7 @@
 {
   "profiles": {
     "PodcastDownloadManager": {
-      "commandName": "Project",
-      "commandLineArgs": "config -p \"E:\\Download\""
+      "commandName": "Project"
     }
   }
 }

@@ -23,11 +23,19 @@ namespace PodcastDownloadManager.Commands
             output.WriteLine("Updating...");
             Opml.UpdateAllPodcasts(out var outputList);
 
-            for (int i = 0; i < outputList.Count; i++)
+            if (outputList.Count == 0)
             {
-                output.WriteLine(outputList[i]);
+                output.WriteLine("All up-to-date.");
             }
-            output.WriteLine("pdlm was updated successfully!");
+            else
+            {
+                for (int i = 0; i < outputList.Count; i++)
+                {
+                    output.WriteLine(outputList[i]);
+                }
+                output.WriteLine("pdlm was updated successfully!");
+            }
+
             return 0;
         }
     }

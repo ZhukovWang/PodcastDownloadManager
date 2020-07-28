@@ -97,6 +97,17 @@ namespace PodcastDownloadManager.Podcast
 
         public void GetPodcastNewlyRelease(ref List<string> newlyRelease)
         {
+            //Download new xml
+            using var client = new WebClient();
+            client.DownloadFile(this.Url, $"{FileName}.tmp");
+
+            //get last update time
+            DateTime lastUpdateDateTime = File.GetLastWriteTimeUtc(FileName);
+
+            File.Delete($"{FileName}");
+            File.Copy($"{FileName}.tmp", FileName, true);
+            File.Delete($"{FileName}.tmp");
+
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.Load(FileName);
 
@@ -104,10 +115,27 @@ namespace PodcastDownloadManager.Podcast
 
             XmlNode channel = root.SelectSingleNode("channel");
 
-            string title = channel.SelectSingleNode("title").InnerText;
+            XmlNodeList nodeList = channel.ChildNodes;
 
-            string showString = $"* {title}";
-            newlyRelease.Add(showString);
+            for (int i = 0; i < nodeList.Count; i++)
+            {
+                if (nodeList[i].Name == "item")
+                {
+                    string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
+                    DateTime dt = DateTime.Parse(newlyReleasePubDate);
+                    if (dt > lastUpdateDateTime)
+                    {
+                        string newlyReleaseTitle =
+                            nodeList[i].SelectSingleNode("title").InnerText.Trim();
+
+                        newlyReleasePubDate = dt.ToString("yyyy-MM-dd", DateTimeFormatInfo.InvariantInfo);
+
+                        string showString = $"* {this.Name} - {newlyReleaseTitle} - {newlyReleasePubDate}";
+
+                        newlyRelease.Add(showString);
+                    }
+                }
+            }
         }
 
         public void BuildPodcastDownloadFile(DateTime dateTime, string downloadDirectory, bool isSimpleFile, string downloadProgram, ref FileStream fs)

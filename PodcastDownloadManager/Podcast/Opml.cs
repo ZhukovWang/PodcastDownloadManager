@@ -204,7 +204,7 @@ namespace PodcastDownloadManager.Podcast
 
             foreach (var podcast in _podcastsDictionary)
             {
-                Podcast p = new Podcast(podcast.Key, podcast.Value);
+                Podcast p = new Podcast(podcast.Key, podcast.Value, true);
 
                 p.GetPodcastNewlyRelease(ref showString);
             }
