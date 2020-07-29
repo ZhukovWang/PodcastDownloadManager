@@ -7,6 +7,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
+using PodcastDownloadManager.FileMetadata;
 
 namespace PodcastDownloadManager.Podcast
 {
@@ -116,6 +117,9 @@ namespace PodcastDownloadManager.Podcast
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.Load(FileName);
 
+            var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
+            nsmgr.AddNamespace("itunes", "http://www.itunes.com/dtds/podcast-1.0.dtd");
+
             var root = xmlDoc.DocumentElement;
 
             XmlNode channel = root.SelectSingleNode("channel");
@@ -143,10 +147,6 @@ namespace PodcastDownloadManager.Podcast
 
                         newlyReleasePubDate = dt.ToString("yyyy_MM_dd", DateTimeFormatInfo.InvariantInfo);
 
-                        FileStream fs = File.Open(ProgramConfiguration.PodcastNewlyReleaseInfo, FileMode.CreateNew);
-
-                        newlyReleaseTitle =
-                            nodeList[i].SelectSingleNode("title").InnerText.Trim();
                         string newlyReleaseDownloadUrl =
                             nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
 
@@ -157,16 +157,34 @@ namespace PodcastDownloadManager.Podcast
                         }
 
                         string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}{fileExtension}");
+
+                        FileStream fs = File.Open(ProgramConfiguration.PodcastNewlyReleaseInfo, FileMode.Append);
+
                         if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.Aria2Name)
                         {
-                            AddText(fs, $"{newlyReleaseDownloadUrl}\n");
-                            AddText(fs, $"\tdir={ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath}\n");
-                            AddText(fs, $"\tout={fileName}\n");
+                            FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
+                            FileTools.AddText(fs, $"\tdir={ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath}\n");
+                            FileTools.AddText(fs, $"\tout={fileName}\n");
                         }
                         else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.IdmName)
                         {
-                            AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath}\" /f \"{fileName}\"\n");
+                            FileTools.AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath}\" /f \"{fileName}\"\n");
                         }
+
+                        fs.Close();
+
+                        string author;
+                        author = nodeList[i].SelectSingleNode("author") != null
+                            ? nodeList[i].SelectSingleNode("author").InnerText
+                            : nodeList[i].SelectSingleNode("itunes:author", nsmgr).InnerText;
+                        string imageUrl = nodeList[i].SelectSingleNode("itunes:image", nsmgr).Attributes["href"].Value;
+
+                        string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
+
+                        string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + "\\" +
+                                                  fileName + ".metadata";
+                        AudioMetadata.CreateAudioMetadata(metadataFilePath, title, newlyReleaseTitle, author, imageUrl, description,
+                            dt);
                     }
                 }
             }
@@ -176,6 +194,9 @@ namespace PodcastDownloadManager.Podcast
         {
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.Load(FileName);
+
+            var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
+            nsmgr.AddNamespace("itunes", "http://www.itunes.com/dtds/podcast-1.0.dtd");
 
             var root = xmlDoc.DocumentElement;
 
@@ -204,7 +225,7 @@ namespace PodcastDownloadManager.Podcast
 
                         if (isSimpleFile)
                         {
-                            AddText(fs, $"{newlyReleaseDownloadUrl}\n");
+                            FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
                         }
                         else
                         {
@@ -217,14 +238,27 @@ namespace PodcastDownloadManager.Podcast
                             string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}{fileExtension}");
                             if (downloadProgram == DownloadTools.Aria2Name)
                             {
-                                AddText(fs, $"{newlyReleaseDownloadUrl}\n");
-                                AddText(fs, $"\tdir={downloadDirectory}\n");
-                                AddText(fs, $"\tout={fileName}\n");
+                                FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
+                                FileTools.AddText(fs, $"\tdir={downloadDirectory}\n");
+                                FileTools.AddText(fs, $"\tout={fileName}\n");
                             }
                             else if (downloadProgram == DownloadTools.IdmName)
                             {
-                                AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{downloadDirectory}\" /f \"{fileName}\"\n");
+                                FileTools.AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{downloadDirectory}\" /f \"{fileName}\"\n");
                             }
+
+                            string author = nodeList[i].SelectSingleNode("author") != null
+                                ? nodeList[i].SelectSingleNode("author").InnerText
+                                : nodeList[i].SelectSingleNode("itunes:author", nsmgr).InnerText;
+
+                            string imageUrl = nodeList[i].SelectSingleNode("itunes:image", nsmgr).Attributes["href"].Value;
+
+                            string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
+
+                            string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath +
+                                                      fileName + ".metadata";
+                            AudioMetadata.CreateAudioMetadata(metadataFilePath, title, newlyReleaseTitle, author, imageUrl, description,
+                                dt);
                         }
                     }
                 }
@@ -266,6 +300,9 @@ namespace PodcastDownloadManager.Podcast
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.Load(FileName);
 
+            var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
+            nsmgr.AddNamespace("itunes", "http://www.itunes.com/dtds/podcast-1.0.dtd");
+
             var root = xmlDoc.DocumentElement;
 
             XmlNode channel = root.SelectSingleNode("channel");
@@ -296,7 +333,7 @@ namespace PodcastDownloadManager.Podcast
 
                         if (isSimpleFile)
                         {
-                            AddText(fs, $"{newlyReleaseDownloadUrl}\n");
+                            FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
                         }
                         else
                         {
@@ -309,14 +346,27 @@ namespace PodcastDownloadManager.Podcast
                             string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}{fileExtension}");
                             if (downloadProgram == DownloadTools.Aria2Name)
                             {
-                                AddText(fs, $"{newlyReleaseDownloadUrl}\n");
-                                AddText(fs, $"\tdir={downloadDirectory}\n");
-                                AddText(fs, $"\tout={fileName}\n");
+                                FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
+                                FileTools.AddText(fs, $"\tdir={downloadDirectory}\n");
+                                FileTools.AddText(fs, $"\tout={fileName}\n");
                             }
                             else if (downloadProgram == DownloadTools.IdmName)
                             {
-                                AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{downloadDirectory}\" /f \"{fileName}\"\n");
+                                FileTools.AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{downloadDirectory}\" /f \"{fileName}\"\n");
                             }
+
+                            string author = nodeList[i].SelectSingleNode("author") != null
+                                ? nodeList[i].SelectSingleNode("author").InnerText
+                                : nodeList[i].SelectSingleNode("itunes:author", nsmgr).InnerText;
+
+                            string imageUrl = nodeList[i].SelectSingleNode("itunes:image", nsmgr).Attributes["href"].Value;
+
+                            string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
+
+                            string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath +
+                                                      fileName + ".metadata";
+                            AudioMetadata.CreateAudioMetadata(metadataFilePath, title, newlyReleaseTitle, author, imageUrl, description,
+                                dt);
                         }
                     }
                 }
@@ -329,12 +379,6 @@ namespace PodcastDownloadManager.Podcast
             Regex regex = new Regex(@"<[^>]+>|</[^>]+>");
             stringOutput = regex.Replace(stringOutput, "");
             return stringOutput;
-        }
-
-        private static void AddText(FileStream fs, string value)
-        {
-            byte[] info = new UTF8Encoding(true).GetBytes(value);
-            fs.Write(info, 0, info.Length);
         }
 
         private static string GetValidName(string name)

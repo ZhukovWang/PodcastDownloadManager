@@ -21,6 +21,7 @@ namespace PodcastDownloadManager
                 .RegisterCommand(UpdateCommand.Name, UpdateCommand.Description, UpdateCommand.Configure)
                 .RegisterCommand(UpgradeCommand.Name, UpgradeCommand.Description, UpgradeCommand.Configure)
                 .RegisterCommand(DownloadCommand.Name, DownloadCommand.Description, DownloadCommand.Configure)
+                .RegisterCommand(AutoMetadataCommand.Name, AutoMetadataCommand.Description, AutoMetadataCommand.Configure)
                 .RegisterCommand(ConfigCommand.Name, ConfigCommand.Description, ConfigCommand.Configure);
         }
 
