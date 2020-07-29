@@ -73,6 +73,14 @@ Download the podcast newly release since last update.
 $ pdlm upgrade
 ```
 
+### autometadata
+
+Automatically add audio metadata to podcast file, when the podcast file is all successful download.
+
+```bash
+$ pdlm autometadata
+```
+
 ### download
 
 Download the podcast specific release.
