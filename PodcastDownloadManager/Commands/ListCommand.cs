@@ -24,11 +24,11 @@ namespace PodcastDownloadManager.Commands
 
             Opml.ListPodcast(out list);
 
-            output.WriteLine("Podcasts:\n");
+            output.WriteLine("Podcasts:");
 
             foreach (string s in list)
             {
-                output.WriteLine(s);
+                output.Write(s);
             }
 
             return 0;

@@ -255,8 +255,8 @@ namespace PodcastDownloadManager.Podcast
 
                             string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
 
-                            string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath +
-                                                      fileName + ".metadata";
+                            string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + "\\" +
+                                                     fileName + ".metadata";
                             AudioMetadata.CreateAudioMetadata(metadataFilePath, title, newlyReleaseTitle, author, imageUrl, description,
                                 dt);
                         }
@@ -363,7 +363,7 @@ namespace PodcastDownloadManager.Podcast
 
                             string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
 
-                            string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath +
+                            string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + "\\" +
                                                       fileName + ".metadata";
                             AudioMetadata.CreateAudioMetadata(metadataFilePath, title, newlyReleaseTitle, author, imageUrl, description,
                                 dt);
