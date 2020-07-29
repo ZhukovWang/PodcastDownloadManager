@@ -19,11 +19,30 @@ $ dotnet build
 
 ## Usage
 
-### prepare
+### Prepare
 
 Install [.Net Core runtime](https://dotnet.microsoft.com/).
 
 Install [Aria2](https://aria2.github.io/) or [Internet Download Manager](http://www.internetdownloadmanager.com/) for automatic download.
+
+### Typical use
+
+```bash
+# config
+$ pdlm config --download-path "path\to\download"
+$ pdlm config --download-program "Aria2"
+$ pdlm config --download-program-path "path\to\download\program"
+
+# add podcast
+$ pdlm add http://path/to/podcast
+
+# update
+$ pdlm update
+$ pdlm upgrade
+$ pdlm autometadata
+```
+
+## Command
 
 ### add
 
