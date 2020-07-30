@@ -133,7 +133,7 @@ namespace PodcastDownloadManager.Podcast
                 if (nodeList[i].Name == "item")
                 {
                     string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
-                    DateTime dt = DateTime.Parse(newlyReleasePubDate);
+                    DateTime dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
                     if (dt > lastUpdateDateTime)
                     {
                         string newlyReleaseTitle =
