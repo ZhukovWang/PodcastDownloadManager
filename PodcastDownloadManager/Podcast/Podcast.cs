@@ -84,7 +84,7 @@ namespace PodcastDownloadManager.Podcast
             string newlyReleaseTitle = newlyRelease.SelectSingleNode("title").InnerText;
             string newlyReleaseDescription = RemoveStripHtml(newlyRelease.SelectSingleNode("description").InnerText);
             string newlyReleasePubDate = newlyRelease.SelectSingleNode("pubDate").InnerText;
-            DateTime dt = DateTime.ParseExact(newlyReleasePubDate, "ddd, dd MMM yyyy HH:mm:ss K", new CultureInfo("en-us"));
+            DateTime dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
             newlyReleasePubDate = dt.ToString("G");
             string newlyReleaseDownloadUrl = newlyRelease.SelectSingleNode("enclosure").Attributes["url"].Value;
 
@@ -211,8 +211,8 @@ namespace PodcastDownloadManager.Podcast
                 if (nodeList[i].Name == "item")
                 {
                     string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
-                    DateTime dt = DateTime.Now;
-                    dt = DateTime.Parse(newlyReleasePubDate);
+                    DateTime dt = DateTime.Now.ToUniversalTime();
+                    dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
 
                     if (dt > dateTime)
                     {
@@ -281,7 +281,7 @@ namespace PodcastDownloadManager.Podcast
                 if (nodeList[i].Name == "item")
                 {
                     string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
-                    DateTime dt = DateTime.Parse(newlyReleasePubDate);
+                    DateTime dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
 
                     string newlyReleaseTitle =
                         nodeList[i].SelectSingleNode("title").InnerText.Trim();
@@ -322,7 +322,7 @@ namespace PodcastDownloadManager.Podcast
                     {
                         string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
                         DateTime dt = DateTime.Now;
-                        dt = DateTime.Parse(newlyReleasePubDate);
+                        dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
 
                         newlyReleasePubDate = dt.ToString("yyyy_MM_dd", DateTimeFormatInfo.InvariantInfo);
 
