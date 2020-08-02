@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using NFlags;
 using NFlags.Commands;
@@ -20,8 +21,14 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
+            Logger.Log.Info("Enter Update command.");
+
+            File.Delete(ProgramConfiguration.PodcastNewlyReleaseInfo);
+
             output.WriteLine("Updating...");
             Opml.UpdateAllPodcasts(out var outputList);
+
+            Logger.Log.Info("Show the update results.");
 
             if (outputList.Count == 0)
             {

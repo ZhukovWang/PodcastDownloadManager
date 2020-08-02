@@ -11,10 +11,13 @@ namespace PodcastDownloadManager
         public static void Main(string[] args)
         {
             ProgramLoaded();
+            Logger.Log.Info("Program load finish.");
 
             Cli.Configure(ConfigureNFlags)
                 .Root(RootCommand.Configure)
                 .Run(args);
+
+            Logger.Log.Info("Program exit.");
         }
 
         private static void ConfigureNFlags(CliConfigurator configurator)
@@ -32,15 +35,18 @@ namespace PodcastDownloadManager
             if (!Directory.Exists(ProgramConfiguration.PodcastsFileDirectory))
             {
                 Directory.CreateDirectory(ProgramConfiguration.PodcastsFileDirectory);
+                Logger.Log.Info($"Create PodcastsFileDirectory, directory locate {ProgramConfiguration.PodcastsFileDirectory}");
             }
 
             if (File.Exists(ProgramConfiguration.ConfigFilePathName))
             {
                 ProgramConfiguration.ReadConfig();
+                Logger.Log.Info("Read config file.");
             }
             else
             {
                 ProgramConfiguration.CreateConfig();
+                Logger.Log.Info("Create new config file.");
             }
         }
     }

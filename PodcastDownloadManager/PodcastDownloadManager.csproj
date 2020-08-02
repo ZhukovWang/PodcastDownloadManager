@@ -9,8 +9,15 @@
   
   <ItemGroup>
     <PackageReference Include="NFlags" Version="1.8.0" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="1.6.4" />
     <PackageReference Include="System.Text.Json" Version="4.7.2" />
     <PackageReference Include="TagLibSharp" Version="2.2.0" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="nlog.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

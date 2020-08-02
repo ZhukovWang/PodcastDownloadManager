@@ -32,16 +32,23 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
+            Logger.Log.Info("Enter Download command.");
+
             string podcastsDownloadDirectory = commandArgs.GetOption<string>(DownloadDirectory);
+
+            Logger.Log.Info($"Download directory is {podcastsDownloadDirectory}.");
 
             if (!Directory.Exists(podcastsDownloadDirectory))
             {
+                Logger.Log.Info("Create download directory.");
+
                 try
                 {
                     Directory.CreateDirectory(podcastsDownloadDirectory);
                 }
                 catch
                 {
+                    Logger.Log.Info($"Directory \"{podcastsDownloadDirectory}\" is not valid.");
                     output.WriteLine("Error. Input of 'dir' is illegal.");
                     return 0;
                 }
@@ -49,21 +56,31 @@ namespace PodcastDownloadManager.Commands
 
             bool isSimpleFile = commandArgs.GetFlag(SimpleFile);
 
+            Logger.Log.Info($"Download simple file is {isSimpleFile}.");
+
             string date = commandArgs.GetParameter<string>(Date);
             DateTime dt;
             try
             {
                 dt = DateTime.ParseExact(date, "yyyyMMdd", new CultureInfo("en-US"));
+
+                Logger.Log.Info($"Download date is {dt.ToString("G")}.");
             }
             catch
             {
+                Logger.Log.Warn($"Download date is not valid.");
+
                 output.WriteLine("Error. Input of 'date' is illegal.");
                 return 0;
             }
 
             output.WriteLine("Building downloading file...");
 
+            Logger.Log.Info("Build download file.");
+
             Opml.DownloadPodcastAfterDate(dt, podcastsDownloadDirectory, isSimpleFile, ProgramConfiguration.DownloadConfigurations.DownloadProgram);
+
+            Logger.Log.Info("Finish build download file.");
 
             output.WriteLine("Building done");
 
@@ -73,13 +90,18 @@ namespace PodcastDownloadManager.Commands
 
                 if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.Aria2Name)
                 {
+                    Logger.Log.Info("Start download newly release use aria2.");
+
                     DownloadTools.DownloadAria2(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.DownloadFileName, output);
                 }
                 else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.IdmName)
                 {
+                    Logger.Log.Info("Start download newly release use idm.");
+
                     DownloadTools.DownloadIdm(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.DownloadFileName, output);
                 }
 
+                Logger.Log.Info("Finish download.");
                 output.WriteLine("Done.");
             }
             return 0;

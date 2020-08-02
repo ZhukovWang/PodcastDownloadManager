@@ -28,9 +28,15 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
+            Logger.Log.Info("Enter Config command.");
+
             string downloadPodcastPath = commandArgs.GetOption<string>(DownloadPodcastPath);
             string downloadProgram = commandArgs.GetOption<string>(DownloadProgram);
             string downloadProgramPath = commandArgs.GetOption<string>(DownloadProgramPath);
+
+            Logger.Log.Info($"Input DownloadPodcastPath config to {downloadPodcastPath}.");
+            Logger.Log.Info($"Input DownloadProgram config to {downloadProgram}.");
+            Logger.Log.Info($"Input DownloadProgramPath config to {downloadProgramPath}.");
 
             if (Directory.Exists(downloadPodcastPath))
             {
@@ -38,6 +44,8 @@ namespace PodcastDownloadManager.Commands
             }
             else
             {
+                Logger.Log.Warn("DownloadPodcastPath is NOT valid.");
+
                 output.WriteLine("Error. Input of 'download-path' does not exist.");
             }
 
@@ -47,6 +55,8 @@ namespace PodcastDownloadManager.Commands
             }
             else
             {
+                Logger.Log.Warn("DownloadProgram is NOT valid.");
+
                 output.WriteLine($"Error. Input of 'download-program' is illegal. Please input {DownloadTools.Aria2Name} or {DownloadTools.IdmName}.");
             }
 
@@ -82,12 +92,15 @@ namespace PodcastDownloadManager.Commands
                 }
                 else
                 {
+                    Logger.Log.Warn("DownloadProgramPath is NOT valid.");
+
                     output.WriteLine("Error. Input of 'download-program-path' does not exist.");
                 }
             }
 
             ProgramConfiguration.SaveConfig();
 
+            Logger.Log.Info("Finish Config command.");
             output.WriteLine("Done.");
 
             return 0;

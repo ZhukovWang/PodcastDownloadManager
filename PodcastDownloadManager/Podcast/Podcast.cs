@@ -46,8 +46,10 @@ namespace PodcastDownloadManager.Podcast
                 File.Delete(FileName);
             }
 
+            Logger.Log.Info($"Start download podcast xml file. Url is {url}.");
             using var client = new WebClient();
             client.DownloadFile(url, FileName);
+            Logger.Log.Info($"Download finish. File path is {FileName}.");
         }
 
         private string GetPodcastName()
@@ -110,6 +112,7 @@ namespace PodcastDownloadManager.Podcast
                 lastUpdateDateTime = File.GetLastWriteTimeUtc(FileName);
                 File.Delete($"{FileName}");
             }
+            Logger.Log.Info($"Get the last update time is {lastUpdateDateTime.ToString("G")}.");
 
             File.Copy($"{FileName}.tmp", FileName, true);
             File.Delete($"{FileName}.tmp");
@@ -138,6 +141,8 @@ namespace PodcastDownloadManager.Podcast
                     {
                         string newlyReleaseTitle =
                             nodeList[i].SelectSingleNode("title").InnerText.Trim();
+
+                        Logger.Log.Info($"Get the newly release title is {newlyReleaseTitle}, time is {dt.ToString("G")}.");
 
                         newlyReleasePubDate = dt.ToString("yyyy-MM-dd", DateTimeFormatInfo.InvariantInfo);
 
@@ -222,6 +227,8 @@ namespace PodcastDownloadManager.Podcast
                             nodeList[i].SelectSingleNode("title").InnerText.Trim();
                         string newlyReleaseDownloadUrl =
                             nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
+
+                        Logger.Log.Info($"Get the newly release title is {newlyReleaseTitle}, time is {dt.ToString("G")}.");
 
                         if (isSimpleFile)
                         {
@@ -330,6 +337,8 @@ namespace PodcastDownloadManager.Podcast
                             nodeList[i].SelectSingleNode("title").InnerText.Trim();
                         string newlyReleaseDownloadUrl =
                             nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
+
+                        Logger.Log.Info($"Get the release title is {newlyReleaseTitle}, time is {dt.ToString("G")}.");
 
                         if (isSimpleFile)
                         {

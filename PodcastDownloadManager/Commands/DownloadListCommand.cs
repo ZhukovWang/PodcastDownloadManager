@@ -23,9 +23,13 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
+            Logger.Log.Info("Enter Download List command.");
+
             output.WriteLine("Listing...");
 
             string name = commandArgs.GetParameter<string>(PodcastName);
+
+            Logger.Log.Info($"Input podcast name is {name}.");
 
             List<string> outputList = new List<string>();
 
@@ -38,11 +42,12 @@ namespace PodcastDownloadManager.Commands
                     output.Write((i + 1).ToString() + ". ");
                     output.Write(outputList[i]);
                 }
-
+                Logger.Log.Warn("Finish listing.");
                 output.WriteLine("Done.");
             }
             else
             {
+                Logger.Log.Warn("The input name is NOT in the library.");
                 output.WriteLine(outputList[0]);
             }
             return 0;

@@ -58,6 +58,8 @@ namespace PodcastDownloadManager.Podcast
 
         private static void GetAllPodcast()
         {
+            Logger.Log.Info("Get all have podcasts info.");
+
             _podcastsDictionary = new Dictionary<string, string>();
 
             XmlDocument xmlDoc = new XmlDocument();
@@ -75,6 +77,8 @@ namespace PodcastDownloadManager.Podcast
                 string podcastUrl = allPodcastNodes[i].Attributes["xmlUrl"].Value;
                 _podcastsDictionary.Add(podcastName, podcastUrl);
             }
+
+            Logger.Log.Info("Finish get all have podcasts info.");
         }
 
         private static void SaveNewOpml()
@@ -127,13 +131,22 @@ namespace PodcastDownloadManager.Podcast
         {
             GetAllPodcast();
 
+            Logger.Log.Info("Get the url's name.");
             string podcastName = GetPodcastName(url);
+            Logger.Log.Info($"Finish get the url's name. Podcast name is {podcastName}");
 
             if (!_podcastsDictionary.ContainsKey(podcastName))
             {
                 _podcastsDictionary.Add(podcastName, url);
+                Logger.Log.Info("Add the podcast to dictionary.");
 
+                Logger.Log.Info("Save the new opml file.");
                 SaveNewOpml();
+                Logger.Log.Info("Finish save the new opml file.");
+            }
+            else
+            {
+                Logger.Log.Info("The podcast is already in the opml file.");
             }
 
             return podcastName;
@@ -150,13 +163,17 @@ namespace PodcastDownloadManager.Podcast
 
             if (!_podcastsDictionary.ContainsKey(name))
             {
+                Logger.Log.Info($"The podcast does not exist in the dictionary. Name is {name}.");
                 return 1;
             }
             else
             {
+                Logger.Log.Info($"Remove the podcast from dictionary. Name is {name}.");
                 _podcastsDictionary.Remove(name);
 
+                Logger.Log.Info("Save the new opml file.");
                 SaveNewOpml();
+                Logger.Log.Info("Finish save the new opml file.");
 
                 return 0;
             }
@@ -186,17 +203,21 @@ namespace PodcastDownloadManager.Podcast
         {
             GetAllPodcast();
             string url;
+            Logger.Log.Info("Get the name's podcast info.");
+
             try
             {
                 url = _podcastsDictionary[name];
             }
             catch
             {
+                Logger.Log.Warn("The name is not in the dictionary.");
                 return "Error.Input of Name does not contain in the library.";
             }
 
             Podcast podcast = new Podcast(name, url);
 
+            Logger.Log.Info("Get the podcast detail.");
             return podcast.GetPodcastDetail();
         }
 
@@ -271,6 +292,8 @@ namespace PodcastDownloadManager.Podcast
             Podcast podcast = new Podcast(name, url);
 
             ProgramConfiguration.DownloadFileName = downloadFileDirectory + "\\" + "PodcastDownload.txt";
+
+            Logger.Log.Info($"Create DownloadFile, is {ProgramConfiguration.DownloadFileName}.");
 
             FileStream fs = File.Create(ProgramConfiguration.DownloadFileName);
 

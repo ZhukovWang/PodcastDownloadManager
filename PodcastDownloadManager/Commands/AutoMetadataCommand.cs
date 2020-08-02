@@ -20,7 +20,12 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
+            Logger.Log.Info("Enter AutoMetadata command.");
+
             AudioMetadata.AutoAddMetadata();
+
+            Logger.Log.Info("Finish AutoMetadata.");
+
             output.WriteLine("Done.");
             return 0;
         }

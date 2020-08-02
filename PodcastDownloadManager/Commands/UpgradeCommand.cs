@@ -21,8 +21,12 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
+            Logger.Log.Info("Enter Upgrade command.");
+
             if (File.GetLastWriteTimeUtc(ProgramConfiguration.PodcastNewlyReleaseInfo) - DateTime.Now > TimeSpan.FromDays(1))
             {
+                Logger.Log.Info("Need Upgrade first.");
+
                 output.WriteLine("Updating...");
                 Opml.UpdateAllPodcasts(out var outputList);
                 output.WriteLine("Update done.");
@@ -34,17 +38,24 @@ namespace PodcastDownloadManager.Commands
             {
                 if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.Aria2Name)
                 {
+                    Logger.Log.Info("Start download newly release use aria2.");
+
                     DownloadTools.DownloadAria2(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.PodcastNewlyReleaseInfo, output);
                 }
                 else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.IdmName)
                 {
+                    Logger.Log.Info("Start download newly release use idm.");
+
                     DownloadTools.DownloadIdm(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.PodcastNewlyReleaseInfo, output);
                 }
                 File.Delete(ProgramConfiguration.PodcastNewlyReleaseInfo);
+
+                Logger.Log.Info("Finish download newly release.");
                 output.WriteLine("Done.");
             }
             else
             {
+                Logger.Log.Info("Nothing upgrade.");
                 output.WriteLine("All up-to-date. Nothing download.");
             }
 

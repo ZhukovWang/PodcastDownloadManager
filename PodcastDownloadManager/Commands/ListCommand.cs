@@ -20,9 +20,13 @@ namespace PodcastDownloadManager.Commands
 
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
+            Logger.Log.Info("Enter List command.");
+
             List<string> list;
 
             Opml.ListPodcast(out list);
+
+            Logger.Log.Info("Show all podcast info.");
 
             output.WriteLine("Podcasts:");
 

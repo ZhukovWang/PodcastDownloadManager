@@ -49,6 +49,8 @@ namespace PodcastDownloadManager.FileMetadata
             {
                 if (file.Contains(".metadata"))
                 {
+                    Logger.Log.Info($"Get the metadata file, name is {file}.");
+
                     string[] metadata = File.ReadAllLines(file);
 
                     string audioTitle = metadata[0];
