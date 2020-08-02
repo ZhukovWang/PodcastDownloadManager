@@ -145,6 +145,11 @@ $ pdlm config --download-program-path "path\to\download\program"
 $ pdlm config -dpp "path\to\download\program"
 ```
 
+## Roadmap
+
+- change project to c/c++ and separate command-line interface and library.
+- add a GUI
+
 ## LICENSE
 
 MIT
