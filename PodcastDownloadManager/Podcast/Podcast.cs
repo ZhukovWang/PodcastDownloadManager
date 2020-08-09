@@ -22,7 +22,7 @@ namespace PodcastDownloadManager.Podcast
         public Podcast(string url)
         {
             this.Url = url;
-            FileName = $"{ProgramConfiguration.PodcastsFileDirectory}/NewPodcast.xml";
+            FileName = $"{ProgramConfiguration.PodcastsFileDirectory}{Path.DirectorySeparatorChar}NewPodcast.xml";
             Download(url);
             this.Name = GetPodcastName();
             File.Delete(FileName);
@@ -32,7 +32,7 @@ namespace PodcastDownloadManager.Podcast
         {
             this.Url = url;
             this.Name = name;
-            FileName = $"{ProgramConfiguration.PodcastsFileDirectory}/{name}.xml";
+            FileName = $"{ProgramConfiguration.PodcastsFileDirectory}{Path.DirectorySeparatorChar}{name}.xml";
             if (!skipDownload)
             {
                 Download(url);
@@ -186,7 +186,7 @@ namespace PodcastDownloadManager.Podcast
 
                         string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
 
-                        string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + "\\" +
+                        string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + Path.DirectorySeparatorChar +
                                                   fileName + ".metadata";
                         AudioMetadata.CreateAudioMetadata(metadataFilePath, title, newlyReleaseTitle, author, imageUrl, description,
                             dt);
@@ -262,7 +262,8 @@ namespace PodcastDownloadManager.Podcast
 
                             string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
 
-                            string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + "\\" +
+                            string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + Path.DirectorySeparatorChar
+                            +
                                                      fileName + ".metadata";
                             AudioMetadata.CreateAudioMetadata(metadataFilePath, title, newlyReleaseTitle, author, imageUrl, description,
                                 dt);
@@ -372,7 +373,7 @@ namespace PodcastDownloadManager.Podcast
 
                             string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
 
-                            string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + "\\" +
+                            string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + Path.DirectorySeparatorChar +
                                                       fileName + ".metadata";
                             AudioMetadata.CreateAudioMetadata(metadataFilePath, title, newlyReleaseTitle, author, imageUrl, description,
                                 dt);

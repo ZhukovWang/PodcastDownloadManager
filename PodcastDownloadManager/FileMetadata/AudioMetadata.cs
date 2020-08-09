@@ -61,7 +61,7 @@ namespace PodcastDownloadManager.FileMetadata
                     string audioImageUrl = metadata[5];
                     string audioComment = metadata[6];
 
-                    string audioName = Path.GetDirectoryName(file) + "\\" + Path.GetFileNameWithoutExtension(file);
+                    string audioName = Path.GetDirectoryName(file) + Path.DirectorySeparatorChar + Path.GetFileNameWithoutExtension(file);
 
                     var tfile = TagLib.File.Create(audioName);
 

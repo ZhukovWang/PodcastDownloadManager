@@ -239,7 +239,7 @@ namespace PodcastDownloadManager.Podcast
         {
             GetAllPodcast();
 
-            ProgramConfiguration.DownloadFileName = downloadFileDirectory + "\\" + "PodcastDownload.txt";
+            ProgramConfiguration.DownloadFileName = downloadFileDirectory + Path.DirectorySeparatorChar + "PodcastDownload.txt";
 
             FileStream fs = File.Create(ProgramConfiguration.DownloadFileName);
 
@@ -291,7 +291,7 @@ namespace PodcastDownloadManager.Podcast
 
             Podcast podcast = new Podcast(name, url);
 
-            ProgramConfiguration.DownloadFileName = downloadFileDirectory + "\\" + "PodcastDownload.txt";
+            ProgramConfiguration.DownloadFileName = downloadFileDirectory + Path.DirectorySeparatorChar + "PodcastDownload.txt";
 
             Logger.Log.Info($"Create DownloadFile, is {ProgramConfiguration.DownloadFileName}.");
 

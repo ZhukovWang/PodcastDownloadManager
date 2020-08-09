@@ -31,31 +31,31 @@ namespace PodcastDownloadManager
         /// <summary>
         /// config file path
         /// </summary>
-        public static string ConfigFilePathName = Local + "\\config.json";
+        public static string ConfigFilePathName = Local + Path.DirectorySeparatorChar + "config.json";
 
         /// <summary>
         /// podcast xml saved directory
         /// </summary>
-        public static string PodcastsFileDirectory = Local + "\\PodcastsFile";
+        public static string PodcastsFileDirectory = Local + Path.DirectorySeparatorChar + "PodcastsFile";
 
         /// <summary>
         /// podcast newly release download info file
         /// </summary>
-        public static readonly string PodcastNewlyReleaseInfo = Local + "\\NewlyReleaseInfo.txt";
+        public static readonly string PodcastNewlyReleaseInfo = Local + Path.DirectorySeparatorChar + "NewlyReleaseInfo.txt";
 
         /// <summary>
         /// all podcast info file
         /// </summary>
-        public static string PodcastFileName = Local + "\\podcasts.opml";
+        public static string PodcastFileName = Local + Path.DirectorySeparatorChar + "podcasts.opml";
 
         /// <summary>
         /// podcast download info file
         /// </summary>
-        public static string DownloadFileName = DownloadConfigurations.DownloadPodcastPath + "\\PodcastDownload.txt";
+        public static string DownloadFileName = DownloadConfigurations.DownloadPodcastPath + Path.DirectorySeparatorChar + "PodcastDownload.txt";
 
         public static void CreateConfig()
         {
-            DownloadConfigurations.DownloadPodcastPath = Local + "\\Download";
+            DownloadConfigurations.DownloadPodcastPath = Local + Path.DirectorySeparatorChar + "Download";
             DownloadConfigurations.DownloadProgram = DownloadTools.Aria2Name;
             DownloadConfigurations.DownloadProgramPathName = "aria2c";
 
