@@ -178,10 +178,16 @@ namespace PodcastDownloadManager.Podcast
 
                         fs.Close();
 
-                        string author;
-                        author = nodeList[i].SelectSingleNode("author") != null
-                            ? nodeList[i].SelectSingleNode("author").InnerText
-                            : nodeList[i].SelectSingleNode("itunes:author", nsmgr).InnerText;
+                        string author = title;
+                        if (nodeList[i].SelectSingleNode("author") != null)
+                        {
+                            author = nodeList[i].SelectSingleNode("author").InnerText;
+                        }
+                        else if (nodeList[i].SelectSingleNode("itunes:author", nsmgr) != null)
+                        {
+                            author = nodeList[i].SelectSingleNode("itunes:author", nsmgr).InnerText;
+                        }
+
                         string imageUrl = nodeList[i].SelectSingleNode("itunes:image", nsmgr).Attributes["href"].Value;
 
                         string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
