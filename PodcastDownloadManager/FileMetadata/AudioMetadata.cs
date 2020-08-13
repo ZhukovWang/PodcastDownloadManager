@@ -41,8 +41,10 @@ namespace PodcastDownloadManager.FileMetadata
             fs.Close();
         }
 
-        public static void AutoAddMetadata()
+        public static void AutoAddMetadata(out List<string> output)
         {
+            output = new List<string>();
+
             string[] allFiles = Directory.GetFiles(ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath);
 
             foreach (string file in allFiles)
@@ -63,39 +65,57 @@ namespace PodcastDownloadManager.FileMetadata
 
                     string audioName = Path.GetDirectoryName(file) + Path.DirectorySeparatorChar + Path.GetFileNameWithoutExtension(file);
 
-                    var tfile = TagLib.File.Create(audioName);
-
-                    tfile.Tag.Title = audioTitle;
-                    tfile.Tag.AlbumArtists = new[] { audioArtist };
-                    tfile.Tag.Album = audioAlbum;
-                    tfile.Tag.Genres = new[] { audioGenre };
-                    tfile.Tag.DateTagged = audioDate;
-
-                    string imageName = $"{audioName}.png";
-                    if (audioImageUrl.Contains(".png"))
+                    if (File.Exists(audioName))
                     {
-                        imageName = $"{audioName}.png";
+                        Logger.Log.Info($"Audio file exists, and name is {audioName}.");
+
+                        var tfile = TagLib.File.Create(audioName);
+
+                        tfile.Tag.Title = audioTitle;
+                        tfile.Tag.AlbumArtists = new[] { audioArtist };
+                        tfile.Tag.Album = audioAlbum;
+                        tfile.Tag.Genres = new[] { audioGenre };
+                        tfile.Tag.DateTagged = audioDate;
+
+                        string imageName = $"{audioName}.png";
+                        if (audioImageUrl.Contains(".png"))
+                        {
+                            imageName = $"{audioName}.png";
+                        }
+                        else if (audioImageUrl.Contains(".jpg"))
+                        {
+                            imageName = $"{audioName}.jpg";
+                        }
+                        else if (audioImageUrl.Contains(".jpeg"))
+                        {
+                            imageName = $"{audioName}.jpeg";
+                        }
+
+                        try
+                        {
+                            var webClient = new WebClient();
+                            webClient.DownloadFile(audioImageUrl, imageName);
+
+                            tfile.Tag.Pictures = new[] { new Picture(imageName), };
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.Log.Error($"Image of \"{audioName}\" download failed. Exception is {e.Message}.");
+                            output.Add($"Image of \"{audioName}\" download failed.");
+                        }
+
+                        tfile.Tag.Comment = audioComment;
+
+                        tfile.Save();
+
+                        File.Delete(file);
+                        File.Delete(imageName);
                     }
-                    else if (audioImageUrl.Contains(".jpg"))
+                    else
                     {
-                        imageName = $"{audioName}.jpg";
+                        Logger.Log.Error($"Audio file does not exist, and name is \"{audioName}\".");
+                        output.Add($"\"{audioName}\" does NOT exist.");
                     }
-                    else if (audioImageUrl.Contains(".jpeg"))
-                    {
-                        imageName = $"{audioName}.jpeg";
-                    }
-
-                    var webClient = new WebClient();
-                    webClient.DownloadFile(audioImageUrl, imageName);
-
-                    tfile.Tag.Pictures = new[] { new Picture(imageName), };
-
-                    tfile.Tag.Comment = audioComment;
-
-                    tfile.Save();
-
-                    File.Delete(file);
-                    File.Delete(imageName);
                 }
             }
         }

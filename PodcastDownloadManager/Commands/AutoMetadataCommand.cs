@@ -22,10 +22,14 @@ namespace PodcastDownloadManager.Commands
         {
             Logger.Log.Info("Enter AutoMetadata command.");
 
-            AudioMetadata.AutoAddMetadata();
+            AudioMetadata.AutoAddMetadata(out var outputList);
 
             Logger.Log.Info("Finish AutoMetadata.");
 
+            foreach (string s in outputList)
+            {
+                output.WriteLine(s);
+            }
             output.WriteLine("Done.");
             return 0;
         }
