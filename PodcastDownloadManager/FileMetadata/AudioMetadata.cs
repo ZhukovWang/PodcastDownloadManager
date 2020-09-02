@@ -78,30 +78,33 @@ namespace PodcastDownloadManager.FileMetadata
                         tfile.Tag.DateTagged = audioDate;
 
                         string imageName = $"{audioName}.png";
-                        if (audioImageUrl.Contains(".png"))
+                        if (audioImageUrl != "null")
                         {
-                            imageName = $"{audioName}.png";
-                        }
-                        else if (audioImageUrl.Contains(".jpg"))
-                        {
-                            imageName = $"{audioName}.jpg";
-                        }
-                        else if (audioImageUrl.Contains(".jpeg"))
-                        {
-                            imageName = $"{audioName}.jpeg";
-                        }
+                            if (audioImageUrl.Contains(".png"))
+                            {
+                                imageName = $"{audioName}.png";
+                            }
+                            else if (audioImageUrl.Contains(".jpg"))
+                            {
+                                imageName = $"{audioName}.jpg";
+                            }
+                            else if (audioImageUrl.Contains(".jpeg"))
+                            {
+                                imageName = $"{audioName}.jpeg";
+                            }
 
-                        try
-                        {
-                            var webClient = new WebClient();
-                            webClient.DownloadFile(audioImageUrl, imageName);
+                            try
+                            {
+                                var webClient = new WebClient();
+                                webClient.DownloadFile(audioImageUrl, imageName);
 
-                            tfile.Tag.Pictures = new[] { new Picture(imageName), };
-                        }
-                        catch (Exception e)
-                        {
-                            Logger.Log.Error($"Image of \"{audioName}\" download failed. Exception is {e.Message}.");
-                            output.Add($"Image of \"{audioName}\" download failed.");
+                                tfile.Tag.Pictures = new[] { new Picture(imageName), };
+                            }
+                            catch (Exception e)
+                            {
+                                Logger.Log.Error($"Image of \"{audioName}\" download failed. Exception is {e.Message}.");
+                                output.Add($"Image of \"{audioName}\" download failed.");
+                            }
                         }
 
                         tfile.Tag.Comment = audioComment;
