@@ -73,7 +73,9 @@ namespace PodcastDownloadManager.FileMetadata
 
                         tfile.Tag.Title = audioTitle;
                         tfile.Tag.AlbumArtists = new[] { audioArtist };
+                        tfile.Tag.Performers = new[] { audioArtist };
                         tfile.Tag.Album = audioAlbum;
+                        tfile.Tag.Composers = new[] { audioArtist };
                         tfile.Tag.Genres = new[] { audioGenre };
                         tfile.Tag.DateTagged = audioDate;
 
