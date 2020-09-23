@@ -161,7 +161,7 @@ namespace PodcastDownloadManager.Podcast
                             fileExtension = ".m4a";
                         }
 
-                        string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}{fileExtension}");
+                        string fileName = GetValidName($"{title} - {newlyReleasePubDate} - {newlyReleaseTitle}{fileExtension}");
 
                         FileStream fs = File.Open(ProgramConfiguration.PodcastNewlyReleaseInfo, FileMode.Append);
 
@@ -256,7 +256,7 @@ namespace PodcastDownloadManager.Podcast
                                 fileExtension = ".m4a";
                             }
 
-                            string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}{fileExtension}");
+                            string fileName = GetValidName($"{title} - {newlyReleasePubDate} - {newlyReleaseTitle}{fileExtension}");
                             if (downloadProgram == DownloadTools.Aria2Name)
                             {
                                 FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
@@ -367,7 +367,7 @@ namespace PodcastDownloadManager.Podcast
                                 fileExtension = ".m4a";
                             }
 
-                            string fileName = GetValidName($"{title} - {newlyReleaseTitle} - {newlyReleasePubDate}{fileExtension}");
+                            string fileName = GetValidName($"{title} - {newlyReleasePubDate} - {newlyReleaseTitle}{fileExtension}");
                             if (downloadProgram == DownloadTools.Aria2Name)
                             {
                                 FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
