@@ -102,8 +102,12 @@ namespace PodcastDownloadManager.Podcast
         public void GetPodcastNewlyRelease(ref List<string> newlyRelease)
         {
             //Download new xml
+            Logger.Log.Info($"Download the new file of {Name}.");
+
             using var client = new WebClient();
             client.DownloadFile(this.Url, $"{FileName}.tmp");
+
+            Logger.Log.Info($"Finish download the new file of {Name}.");
 
             //get last update time
             DateTime lastUpdateDateTime = DateTime.Now;
@@ -112,7 +116,7 @@ namespace PodcastDownloadManager.Podcast
                 lastUpdateDateTime = File.GetLastWriteTimeUtc(FileName);
                 File.Delete($"{FileName}");
             }
-            Logger.Log.Info($"Get the last update time is {lastUpdateDateTime.ToString("G")}.");
+            Logger.Log.Info($"Get the {Name} last update time is {lastUpdateDateTime.ToString("G")}.");
 
             File.Copy($"{FileName}.tmp", FileName, true);
             File.Delete($"{FileName}.tmp");
