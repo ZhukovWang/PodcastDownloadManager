@@ -23,7 +23,7 @@ namespace PodcastDownloadManager.Commands
         {
             Logger.Log.Info("Enter Update command.");
 
-            File.Delete(ProgramConfiguration.PodcastNewlyReleaseInfo);
+            //File.Delete(ProgramConfiguration.PodcastNewlyReleaseInfo);
 
             output.WriteLine("Updating...");
             Opml.UpdateAllPodcasts(out var outputList);

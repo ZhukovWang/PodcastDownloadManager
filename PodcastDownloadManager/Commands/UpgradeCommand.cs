@@ -51,6 +51,7 @@ namespace PodcastDownloadManager.Commands
                 File.Delete(ProgramConfiguration.PodcastNewlyReleaseInfo);
 
                 Logger.Log.Info("Finish download newly release.");
+                File.Delete(ProgramConfiguration.PodcastNewlyReleaseInfo);
                 output.WriteLine("Done.");
             }
             else
