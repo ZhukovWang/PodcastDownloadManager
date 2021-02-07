@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using NFlags;
+﻿using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.Podcast;
+using System;
+using System.IO;
 
 namespace PodcastDownloadManager.Commands
 {
@@ -28,7 +26,7 @@ namespace PodcastDownloadManager.Commands
                 Logger.Log.Info("Need Upgrade first.");
 
                 output.WriteLine("Updating...");
-                Opml.UpdateAllPodcasts(out var outputList);
+                Opml.UpdateAllPodcasts(ref output);
                 output.WriteLine("Update done.");
             }
 

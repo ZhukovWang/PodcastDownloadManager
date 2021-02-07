@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using NFlags;
+﻿using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.Podcast;
 
@@ -26,22 +22,11 @@ namespace PodcastDownloadManager.Commands
             //File.Delete(ProgramConfiguration.PodcastNewlyReleaseInfo);
 
             output.WriteLine("Updating...");
-            Opml.UpdateAllPodcasts(out var outputList);
-
             Logger.Log.Info("Show the update results.");
 
-            if (outputList.Count == 0)
-            {
-                output.WriteLine("All up-to-date.");
-            }
-            else
-            {
-                for (int i = 0; i < outputList.Count; i++)
-                {
-                    output.WriteLine(outputList[i]);
-                }
-                output.WriteLine("pdlm was updated successfully!");
-            }
+            int count = Opml.UpdateAllPodcasts(ref output);
+
+            output.WriteLine(count == 0 ? "All up-to-date." : "pdlm was updated successfully!");
 
             return 0;
         }

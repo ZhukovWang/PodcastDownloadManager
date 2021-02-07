@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using NFlags;
+﻿using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.FileMetadata;
 
@@ -22,14 +19,10 @@ namespace PodcastDownloadManager.Commands
         {
             Logger.Log.Info("Enter AutoMetadata command.");
 
-            AudioMetadata.AutoAddMetadata(out var outputList);
+            AudioMetadata.AutoAddMetadata(ref output);
 
             Logger.Log.Info("Finish AutoMetadata.");
 
-            foreach (string s in outputList)
-            {
-                output.WriteLine(s);
-            }
             output.WriteLine("Done.");
             return 0;
         }

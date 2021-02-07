@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using NFlags;
+﻿using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.Podcast;
+using System.IO;
 
 namespace PodcastDownloadManager.Commands
 {

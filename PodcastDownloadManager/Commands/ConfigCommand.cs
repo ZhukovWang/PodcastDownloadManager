@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using NFlags;
+﻿using NFlags;
 using NFlags.Commands;
-using PodcastDownloadManager.Podcast;
+using System;
+using System.IO;
 
 namespace PodcastDownloadManager.Commands
 {
@@ -76,13 +73,17 @@ namespace PodcastDownloadManager.Commands
             {
                 bool isValid = false;
                 var values = System.Environment.GetEnvironmentVariable("PATH");
-                foreach (var path in values.Split(Path.PathSeparator))
+
+                if (values != null)
                 {
-                    var fullPath = Path.Combine(path, downloadProgramPath);
-                    if (File.Exists(fullPath))
+                    foreach (var path in values.Split(Path.PathSeparator))
                     {
-                        isValid = true;
-                        break;
+                        var fullPath = Path.Combine(path, downloadProgramPath);
+                        if (File.Exists(fullPath))
+                        {
+                            isValid = true;
+                            break;
+                        }
                     }
                 }
 

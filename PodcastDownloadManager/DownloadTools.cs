@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using NFlags;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
-using NFlags;
 
 namespace PodcastDownloadManager
 {
@@ -29,9 +26,9 @@ namespace PodcastDownloadManager
 
             process.EnableRaisingEvents = true;
 
-            process.Exited += new EventHandler(((sender, args) => output.WriteLine("Done.")));
-            process.OutputDataReceived += new DataReceivedEventHandler(((sender, args) => output.WriteLine(args.Data)));
-            process.ErrorDataReceived += new DataReceivedEventHandler(((sender, args) => output.WriteLine(args.Data)));
+            process.Exited += ((sender, args) => output.WriteLine("Done."));
+            process.OutputDataReceived += ((sender, args) => output.WriteLine(args.Data));
+            process.ErrorDataReceived += ((sender, args) => output.WriteLine(args.Data));
 
             process.Start();
 
@@ -63,8 +60,8 @@ namespace PodcastDownloadManager
 
                 processAddDownload.EnableRaisingEvents = true;
 
-                processAddDownload.OutputDataReceived += new DataReceivedEventHandler(((sender, args) => output.WriteLine(args.Data)));
-                processAddDownload.ErrorDataReceived += new DataReceivedEventHandler(((sender, args) => output.WriteLine(args.Data)));
+                processAddDownload.OutputDataReceived += ((sender, args) => output.WriteLine(args.Data));
+                processAddDownload.ErrorDataReceived += ((sender, args) => output.WriteLine(args.Data));
 
                 processAddDownload.Start();
 
@@ -90,8 +87,8 @@ namespace PodcastDownloadManager
 
             processStartDownload.EnableRaisingEvents = true;
 
-            processStartDownload.OutputDataReceived += new DataReceivedEventHandler(((sender, args) => output.WriteLine(args.Data)));
-            processStartDownload.ErrorDataReceived += new DataReceivedEventHandler(((sender, args) => output.WriteLine(args.Data)));
+            processStartDownload.OutputDataReceived += ((sender, args) => output.WriteLine(args.Data));
+            processStartDownload.ErrorDataReceived += ((sender, args) => output.WriteLine(args.Data));
 
             processStartDownload.Start();
 

@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using NFlags;
+using System;
 using System.IO;
 using System.Net;
-using System.Text;
 using TagLib;
-using File = System.IO.File;
 
 namespace PodcastDownloadManager.FileMetadata
 {
@@ -13,7 +11,7 @@ namespace PodcastDownloadManager.FileMetadata
         public static void CreateAudioMetadata(string metadataFilePath, string podcastTitle, string releaseTitle, string author, string imageUrl,
             string comment, DateTime time)
         {
-            FileStream fs = File.Create(metadataFilePath);
+            FileStream fs = System.IO.File.Create(metadataFilePath);
 
             //Title
             FileTools.AddText(fs, $"{releaseTitle}\n");
@@ -41,10 +39,8 @@ namespace PodcastDownloadManager.FileMetadata
             fs.Close();
         }
 
-        public static void AutoAddMetadata(out List<string> output)
+        public static void AutoAddMetadata(ref IOutput output)
         {
-            output = new List<string>();
-
             string[] allFiles = Directory.GetFiles(ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath);
 
             foreach (string file in allFiles)
@@ -53,7 +49,7 @@ namespace PodcastDownloadManager.FileMetadata
                 {
                     Logger.Log.Info($"Get the metadata file, name is {file}.");
 
-                    string[] metadata = File.ReadAllLines(file);
+                    string[] metadata = System.IO.File.ReadAllLines(file);
 
                     string audioTitle = metadata[0];
                     string audioArtist = metadata[1];
@@ -65,19 +61,19 @@ namespace PodcastDownloadManager.FileMetadata
 
                     string audioName = Path.GetDirectoryName(file) + Path.DirectorySeparatorChar + Path.GetFileNameWithoutExtension(file);
 
-                    if (File.Exists(audioName))
+                    if (System.IO.File.Exists(audioName))
                     {
                         Logger.Log.Info($"Audio file exists, and name is {audioName}.");
 
-                        var tfile = TagLib.File.Create(audioName);
+                        var audioFile = TagLib.File.Create(audioName);
 
-                        tfile.Tag.Title = audioTitle;
-                        tfile.Tag.AlbumArtists = new[] { audioArtist };
-                        tfile.Tag.Performers = new[] { audioArtist };
-                        tfile.Tag.Album = audioAlbum;
-                        tfile.Tag.Composers = new[] { audioArtist };
-                        tfile.Tag.Genres = new[] { audioGenre };
-                        tfile.Tag.DateTagged = audioDate;
+                        audioFile.Tag.Title = audioTitle;
+                        audioFile.Tag.AlbumArtists = new[] { audioArtist };
+                        audioFile.Tag.Performers = new[] { audioArtist };
+                        audioFile.Tag.Album = audioAlbum;
+                        audioFile.Tag.Composers = new[] { audioArtist };
+                        audioFile.Tag.Genres = new[] { audioGenre };
+                        audioFile.Tag.DateTagged = audioDate;
 
                         string imageName = $"{audioName}.png";
                         if (audioImageUrl != "null")
@@ -100,26 +96,26 @@ namespace PodcastDownloadManager.FileMetadata
                                 var webClient = new WebClient();
                                 webClient.DownloadFile(audioImageUrl, imageName);
 
-                                tfile.Tag.Pictures = new[] { new Picture(imageName), };
+                                audioFile.Tag.Pictures = new IPicture[] { new Picture(imageName), };
                             }
                             catch (Exception e)
                             {
                                 Logger.Log.Error($"Image of \"{audioName}\" download failed. Exception is {e.Message}.");
-                                output.Add($"Image of \"{audioName}\" download failed.");
+                                output.WriteLine($"Image of \"{audioName}\" download failed.");
                             }
                         }
 
-                        tfile.Tag.Comment = audioComment;
+                        audioFile.Tag.Comment = audioComment;
 
-                        tfile.Save();
+                        audioFile.Save();
 
-                        File.Delete(file);
-                        File.Delete(imageName);
+                        System.IO.File.Delete(file);
+                        System.IO.File.Delete(imageName);
                     }
                     else
                     {
                         Logger.Log.Error($"Audio file does not exist, and name is \"{audioName}\".");
-                        output.Add($"\"{audioName}\" does NOT exist.");
+                        output.WriteLine($"\"{audioName}\" does NOT exist.");
                     }
                 }
             }

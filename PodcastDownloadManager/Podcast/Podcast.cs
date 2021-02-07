@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using PodcastDownloadManager.FileMetadata;
+using NFlags;
 
 namespace PodcastDownloadManager.Podcast
 {
@@ -99,7 +100,7 @@ namespace PodcastDownloadManager.Podcast
                    $"Download url: {newlyReleaseDownloadUrl}";
         }
 
-        public void GetPodcastNewlyRelease(ref List<string> newlyRelease)
+        public void GetPodcastNewlyRelease(ref IOutput output, ref int updateCount)
         {
             //Download new xml
             Logger.Log.Info($"Download the new file of {Name}.");
@@ -129,9 +130,29 @@ namespace PodcastDownloadManager.Podcast
 
             var root = xmlDoc.DocumentElement;
 
+            if (root == null)
+            {
+                output.WriteLine("The xml file don't have 'root'.");
+                return;
+            }
+
             XmlNode channel = root.SelectSingleNode("channel");
 
-            string title = channel.SelectSingleNode("title").InnerText;
+            if (channel == null)
+            {
+                output.WriteLine("The xml file don't have 'channel'.");
+                return;
+            }
+
+            XmlNode titleNode = channel.SelectSingleNode("title");
+
+            if (titleNode == null)
+            {
+                output.WriteLine("The xml file don't have 'title'.");
+                return;
+            }
+
+            string title = titleNode.InnerText;
 
             XmlNodeList nodeList = channel.ChildNodes;
 
@@ -152,7 +173,8 @@ namespace PodcastDownloadManager.Podcast
 
                         string showString = $"* {this.Name} - {newlyReleaseTitle} - {newlyReleasePubDate}";
 
-                        newlyRelease.Add(showString);
+                        output.WriteLine(showString);
+                        updateCount++;
 
                         newlyReleasePubDate = dt.ToString("yyyy_MM_dd", DateTimeFormatInfo.InvariantInfo);
 
@@ -291,7 +313,7 @@ namespace PodcastDownloadManager.Podcast
             }
         }
 
-        public void GetPodcastAllReleaseDetail(ref List<string> outputStrings)
+        public void GetPodcastAllReleaseDetail(ref IOutput output)
         {
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.Load(FileName);
@@ -314,9 +336,9 @@ namespace PodcastDownloadManager.Podcast
 
                     newlyReleasePubDate = dt.ToString("G");
 
-                    string showString = $"{newlyReleaseTitle} - {newlyReleasePubDate}\n";
+                    string showString = $"* {newlyReleaseTitle} - {newlyReleasePubDate}";
 
-                    outputStrings.Add(showString);
+                    output.WriteLine(showString);
                 }
             }
         }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using NFlags;
+﻿using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.Commands;
 

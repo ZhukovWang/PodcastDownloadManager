@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.Text;
-using System.IO;
-using NFlags;
+﻿using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.Podcast;
+using System;
+using System.Globalization;
+using System.IO;
 
 namespace PodcastDownloadManager.Commands
 {
@@ -22,7 +19,7 @@ namespace PodcastDownloadManager.Commands
         public static void Configure(CommandConfigurator configurator)
         {
             configurator
-                .RegisterParameter(Date, "Release will be downloaded after the date.", "20200701")
+                .RegisterParameter(Date, "Release will be downloaded after the date.", "20210101")
                 .RegisterFlag(SimpleFile, "s", "Create a simple file just have download url, could use to other download software. And not automatic download.", false)
                 .RegisterOption(DownloadDirectory, "d", "Download file directory.", ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath)
                 .RegisterCommand(DownloadListCommand.Name, DownloadListCommand.Description, DownloadListCommand.Configure)

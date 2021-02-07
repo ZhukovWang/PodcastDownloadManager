@@ -1,8 +1,5 @@
-﻿using System;
+﻿using NFlags;
 using System.IO;
-using NFlags;
-using NFlags.Commands;
-using PodcastDownloadManager.Commands;
 
 namespace PodcastDownloadManager
 {

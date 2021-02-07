@@ -30,8 +30,7 @@ namespace PodcastDownloadManager.Commands
 
             Logger.Log.Info($"Get the Add command input string, is {url}.");
 
-            Uri uriResult;
-            bool result = Uri.TryCreate(url, UriKind.Absolute, out uriResult)
+            bool result = Uri.TryCreate(url, UriKind.Absolute, out var uriResult)
                           && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
 
             if (result)

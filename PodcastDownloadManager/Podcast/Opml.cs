@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Xml;
-using System.Xml.Linq;
+using NFlags;
 
 namespace PodcastDownloadManager.Podcast
 {
@@ -182,20 +181,15 @@ namespace PodcastDownloadManager.Podcast
         /// <summary>
         /// show the podcast list
         /// </summary>
-        /// <param name="podcastList">all podcast information</param>
-        public static void ListPodcast(out List<string> podcastList)
+        public static void ListPodcast(ref IOutput output)
         {
             GetAllPodcast();
 
-            podcastList = new List<string>();
-
             foreach (KeyValuePair<string, string> podcast in _podcastsDictionary)
             {
-                string showString = String.Empty;
+                var showString = $"* Name: {podcast.Key}  Url: {podcast.Value}";
 
-                showString = $"\tName: {podcast.Key}  Url: {podcast.Value}\n";
-
-                podcastList.Add(showString);
+                output.WriteLine(showString);
             }
         }
 
@@ -221,9 +215,9 @@ namespace PodcastDownloadManager.Podcast
             return podcast.GetPodcastDetail();
         }
 
-        public static void UpdateAllPodcasts(out List<string> showString)
+        public static int UpdateAllPodcasts(ref IOutput output)
         {
-            showString = new List<string>();
+            int updateCount = 0;
 
             GetAllPodcast();
 
@@ -231,8 +225,10 @@ namespace PodcastDownloadManager.Podcast
             {
                 Podcast p = new Podcast(podcast.Key, podcast.Value, true);
 
-                p.GetPodcastNewlyRelease(ref showString);
+                p.GetPodcastNewlyRelease(ref output, ref updateCount);
             }
+
+            return updateCount;
         }
 
         public static void DownloadPodcastAfterDate(DateTime dt, string downloadFileDirectory, bool isSimpleFile, string downloadProgram)
@@ -253,7 +249,7 @@ namespace PodcastDownloadManager.Podcast
             fs.Close();
         }
 
-        public static int ListPodcastAllRelease(string name, ref List<string> outputString)
+        public static int ListPodcastAllRelease(string name, ref IOutput output)
         {
             GetAllPodcast();
             string url;
@@ -264,13 +260,13 @@ namespace PodcastDownloadManager.Podcast
             }
             catch
             {
-                outputString.Add("Error. Input of Name does not contain in the library.");
+                output.WriteLine("Error. Input of Name does not contain in the library.");
                 return -1;
             }
 
             Podcast podcast = new Podcast(name, url);
 
-            podcast.GetPodcastAllReleaseDetail(ref outputString);
+            podcast.GetPodcastAllReleaseDetail(ref output);
 
             return 0;
         }

@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using NFlags;
+﻿using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.Podcast;
+using System.Collections.Generic;
 
 namespace PodcastDownloadManager.Commands
 {
@@ -31,24 +29,16 @@ namespace PodcastDownloadManager.Commands
 
             Logger.Log.Info($"Input podcast name is {name}.");
 
-            List<string> outputList = new List<string>();
-
-            int res = Opml.ListPodcastAllRelease(name, ref outputList);
+            int res = Opml.ListPodcastAllRelease(name, ref output);
 
             if (res == 0)
             {
-                for (var i = 0; i < outputList.Count; i++)
-                {
-                    output.Write((i + 1).ToString() + ". ");
-                    output.Write(outputList[i]);
-                }
                 Logger.Log.Warn("Finish listing.");
                 output.WriteLine("Done.");
             }
             else
             {
                 Logger.Log.Warn("The input name is NOT in the library.");
-                output.WriteLine(outputList[0]);
             }
             return 0;
         }

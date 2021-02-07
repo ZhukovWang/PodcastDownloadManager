@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using NFlags;
+﻿using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.Podcast;
 
@@ -22,18 +19,11 @@ namespace PodcastDownloadManager.Commands
         {
             Logger.Log.Info("Enter List command.");
 
-            List<string> list;
-
-            Opml.ListPodcast(out list);
-
             Logger.Log.Info("Show all podcast info.");
 
             output.WriteLine("Podcasts:");
 
-            foreach (string s in list)
-            {
-                output.Write(s);
-            }
+            Opml.ListPodcast(ref output);
 
             return 0;
         }
