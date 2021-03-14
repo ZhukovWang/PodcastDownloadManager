@@ -37,13 +37,13 @@ namespace PodcastDownloadManager.Commands
                 if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.Aria2Name)
                 {
                     Logger.Log.Info("Start download newly release use aria2.");
-
+                    output.WriteLine("Start download newly release use aria2.");
                     DownloadTools.DownloadAria2(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.PodcastNewlyReleaseInfo, output);
                 }
                 else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.IdmName)
                 {
                     Logger.Log.Info("Start download newly release use idm.");
-
+                    output.WriteLine("Start download newly release use idm.");
                     DownloadTools.DownloadIdm(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.PodcastNewlyReleaseInfo, output);
                 }
                 File.Delete(ProgramConfiguration.PodcastNewlyReleaseInfo);

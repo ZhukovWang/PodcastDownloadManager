@@ -108,6 +108,7 @@ namespace PodcastDownloadManager.FileMetadata
                         audioFile.Tag.Comment = audioComment;
 
                         audioFile.Save();
+                        output.WriteLine($"\"{file}\" 's metadata has been written.");
 
                         System.IO.File.Delete(file);
                         System.IO.File.Delete(imageName);
