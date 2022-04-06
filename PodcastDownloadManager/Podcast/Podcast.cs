@@ -296,9 +296,13 @@ namespace PodcastDownloadManager.Podcast
 
                             string author = nodeList[i].SelectSingleNode("author") != null
                                 ? nodeList[i].SelectSingleNode("author").InnerText
-                                : nodeList[i].SelectSingleNode("itunes:author", nsmgr).InnerText;
+                                : nodeList[i].SelectSingleNode("itunes:author", nsmgr) != null
+                                    ? nodeList[i].SelectSingleNode("itunes:author", nsmgr).InnerText
+                                    : "None";
 
-                            string imageUrl = nodeList[i].SelectSingleNode("itunes:image", nsmgr).Attributes["href"].Value;
+                            string imageUrl = nodeList[i].SelectSingleNode("itunes:image", nsmgr) != null
+                                ? nodeList[i].SelectSingleNode("itunes:image", nsmgr).Attributes["href"].Value
+                                : channel.SelectSingleNode("itunes:image", nsmgr).InnerText;
 
                             string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
 
