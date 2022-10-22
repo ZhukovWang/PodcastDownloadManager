@@ -106,7 +106,16 @@ namespace PodcastDownloadManager.Podcast
             Logger.Log.Info($"Download the new file of {Name}.");
 
             using var client = new WebClient();
-            client.DownloadFile(this.Url, $"{FileName}.tmp");
+            try
+            {
+                client.DownloadFile(this.Url, $"{FileName}.tmp");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Download {Name} failed.");
+                Console.WriteLine(e);
+                return;
+            }
 
             Logger.Log.Info($"Finish download the new file of {Name}.");
 
