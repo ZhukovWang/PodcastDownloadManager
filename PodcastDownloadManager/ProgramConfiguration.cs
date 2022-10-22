@@ -2,6 +2,7 @@
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PodcastDownloadManager
 {
@@ -22,18 +23,18 @@ namespace PodcastDownloadManager
         /// <summary>
         /// pdlm location
         /// </summary>
-        public static readonly string Local =
+        private static readonly string Local =
             Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
         /// <summary>
         /// config file path
         /// </summary>
-        public static string ConfigFilePathName = Local + Path.DirectorySeparatorChar + "config.json";
+        public static readonly string ConfigFilePathName = Local + Path.DirectorySeparatorChar + "config.json";
 
         /// <summary>
         /// podcast xml saved directory
         /// </summary>
-        public static string PodcastsFileDirectory = Local + Path.DirectorySeparatorChar + "PodcastsFile";
+        public static readonly string PodcastsFileDirectory = Local + Path.DirectorySeparatorChar + "PodcastsFile";
 
         /// <summary>
         /// podcast newly release download info file
@@ -43,7 +44,7 @@ namespace PodcastDownloadManager
         /// <summary>
         /// all podcast info file
         /// </summary>
-        public static string PodcastFileName = Local + Path.DirectorySeparatorChar + "podcasts.opml";
+        public static readonly string PodcastFileName = Local + Path.DirectorySeparatorChar + "podcasts.opml";
 
         /// <summary>
         /// podcast download info file
@@ -69,7 +70,7 @@ namespace PodcastDownloadManager
         {
             var options = new JsonSerializerOptions
             {
-                IgnoreNullValues = true
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             };
 
             byte[] jsonUtf8Bytes = File.ReadAllBytes(ConfigFilePathName);

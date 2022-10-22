@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using PodcastDownloadManager.FileMetadata;
@@ -14,26 +11,26 @@ namespace PodcastDownloadManager.Podcast
 {
     public class Podcast
     {
-        public string Url;
+        private readonly string _url;
 
-        public string Name;
+        public readonly string Name;
 
-        private string FileName;
+        private readonly string _fileName;
 
         public Podcast(string url)
         {
-            this.Url = url;
-            FileName = $"{ProgramConfiguration.PodcastsFileDirectory}{Path.DirectorySeparatorChar}NewPodcast.xml";
+            this._url = url;
+            _fileName = $"{ProgramConfiguration.PodcastsFileDirectory}{Path.DirectorySeparatorChar}NewPodcast.xml";
             Download(url);
             this.Name = GetPodcastName();
-            File.Delete(FileName);
+            File.Delete(_fileName);
         }
 
         public Podcast(string name, string url, bool skipDownload = false)
         {
-            this.Url = url;
+            this._url = url;
             this.Name = name;
-            FileName = $"{ProgramConfiguration.PodcastsFileDirectory}{Path.DirectorySeparatorChar}{name}.xml";
+            _fileName = $"{ProgramConfiguration.PodcastsFileDirectory}{Path.DirectorySeparatorChar}{name}.xml";
             if (!skipDownload)
             {
                 Download(url);
@@ -42,21 +39,29 @@ namespace PodcastDownloadManager.Podcast
 
         private void Download(string url)
         {
-            if (File.Exists(FileName))
+            if (File.Exists(_fileName))
             {
-                File.Delete(FileName);
+                File.Delete(_fileName);
             }
 
             Logger.Log.Info($"Start download podcast xml file. Url is {url}.");
-            using var client = new WebClient();
-            client.DownloadFile(url, FileName);
-            Logger.Log.Info($"Download finish. File path is {FileName}.");
+            try
+            {
+                DownloadHelper.DownloadFileAsync(url, _fileName).Wait();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Download {_fileName} failed.");
+                Logger.Log.Error($"Download failed. File path is {_fileName}. Exception is {e}");
+                return;
+            }
+            Logger.Log.Info($"Download finish. File path is {_fileName}.");
         }
 
         private string GetPodcastName()
         {
             XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(FileName);
+            xmlDoc.Load(_fileName);
 
             var root = xmlDoc.DocumentElement;
 
@@ -72,7 +77,7 @@ namespace PodcastDownloadManager.Podcast
         public string GetPodcastDetail()
         {
             XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(FileName);
+            xmlDoc.Load(_fileName);
 
             var root = xmlDoc.DocumentElement;
 
@@ -105,15 +110,14 @@ namespace PodcastDownloadManager.Podcast
             //Download new xml
             Logger.Log.Info($"Download the new file of {Name}.");
 
-            using var client = new WebClient();
             try
             {
-                client.DownloadFile(this.Url, $"{FileName}.tmp");
+                DownloadHelper.DownloadFileAsync(this._url,  $"{_fileName}.tmp").Wait();
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Download {Name} failed.");
-                Console.WriteLine(e);
+                Logger.Log.Error($"Download {Name} failed. Exception is {e}");
                 return;
             }
 
@@ -121,18 +125,18 @@ namespace PodcastDownloadManager.Podcast
 
             //get last update time
             DateTime lastUpdateDateTime = DateTime.Now;
-            if (File.Exists(FileName))
+            if (File.Exists(_fileName))
             {
-                lastUpdateDateTime = File.GetLastWriteTimeUtc(FileName);
-                File.Delete($"{FileName}");
+                lastUpdateDateTime = File.GetLastWriteTimeUtc(_fileName);
+                File.Delete($"{_fileName}");
             }
             Logger.Log.Info($"Get the {Name} last update time is {lastUpdateDateTime.ToString("G")}.");
 
-            File.Copy($"{FileName}.tmp", FileName, true);
-            File.Delete($"{FileName}.tmp");
+            File.Copy($"{_fileName}.tmp", _fileName, true);
+            File.Delete($"{_fileName}.tmp");
 
             XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(FileName);
+            xmlDoc.Load(_fileName);
 
             var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
             nsmgr.AddNamespace("itunes", "http://www.itunes.com/dtds/podcast-1.0.dtd");
@@ -247,7 +251,7 @@ namespace PodcastDownloadManager.Podcast
         public void BuildPodcastDownloadFile(DateTime dateTime, string downloadDirectory, bool isSimpleFile, string downloadProgram, ref FileStream fs)
         {
             XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(FileName);
+            xmlDoc.Load(_fileName);
 
             var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
             nsmgr.AddNamespace("itunes", "http://www.itunes.com/dtds/podcast-1.0.dtd");
@@ -265,8 +269,7 @@ namespace PodcastDownloadManager.Podcast
                 if (nodeList[i].Name == "item")
                 {
                     string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
-                    DateTime dt = DateTime.Now.ToUniversalTime();
-                    dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
+                    DateTime dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
 
                     if (dt > dateTime)
                     {
@@ -329,7 +332,7 @@ namespace PodcastDownloadManager.Podcast
         public void GetPodcastAllReleaseDetail(ref IOutput output)
         {
             XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(FileName);
+            xmlDoc.Load(_fileName);
 
             var root = xmlDoc.DocumentElement;
 
@@ -359,7 +362,7 @@ namespace PodcastDownloadManager.Podcast
         public void DownloadSelectIndexRelease(int[] selectIndex, string downloadDirectory, bool isSimpleFile, string downloadProgram, ref FileStream fs)
         {
             XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(FileName);
+            xmlDoc.Load(_fileName);
 
             var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
             nsmgr.AddNamespace("itunes", "http://www.itunes.com/dtds/podcast-1.0.dtd");
@@ -382,15 +385,12 @@ namespace PodcastDownloadManager.Podcast
                     if (selectIndex.Contains(index))
                     {
                         string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
-                        DateTime dt = DateTime.Now;
-                        dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
+                        DateTime dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
 
                         newlyReleasePubDate = dt.ToString("yyyy_MM_dd", DateTimeFormatInfo.InvariantInfo);
 
-                        string newlyReleaseTitle =
-                            nodeList[i].SelectSingleNode("title").InnerText.Trim();
-                        string newlyReleaseDownloadUrl =
-                            nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
+                        string newlyReleaseTitle = nodeList[i].SelectSingleNode("title").InnerText.Trim();
+                        string newlyReleaseDownloadUrl = nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
 
                         Logger.Log.Info($"Get the release title is {newlyReleaseTitle}, time is {dt.ToString("G")}.");
 

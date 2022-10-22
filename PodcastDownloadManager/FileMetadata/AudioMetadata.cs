@@ -1,7 +1,6 @@
 ﻿using NFlags;
 using System;
 using System.IO;
-using System.Net;
 using TagLib;
 
 namespace PodcastDownloadManager.FileMetadata
@@ -26,7 +25,7 @@ namespace PodcastDownloadManager.FileMetadata
             FileTools.AddText(fs, "Podcast\n");
 
             //Date
-            FileTools.AddText(fs, $"{time.ToString("G")}\n");
+            FileTools.AddText(fs, $"{time:G}\n");
 
             //ImageUrl
             FileTools.AddText(fs, $"{imageUrl}\n");
@@ -93,10 +92,8 @@ namespace PodcastDownloadManager.FileMetadata
 
                             try
                             {
-                                var webClient = new WebClient();
-                                webClient.DownloadFile(audioImageUrl, imageName);
-
-                                audioFile.Tag.Pictures = new IPicture[] { new Picture(imageName), };
+                                DownloadHelper.DownloadFileAsync(audioImageUrl, imageName).Wait();
+                                audioFile.Tag.Pictures = new IPicture[] { new Picture(imageName) };
                             }
                             catch (Exception e)
                             {
