@@ -422,7 +422,11 @@ namespace PodcastDownloadManager.Podcast
                                 ? nodeList[i].SelectSingleNode("author").InnerText
                                 : nodeList[i].SelectSingleNode("itunes:author", nsmgr).InnerText;
 
-                            string imageUrl = nodeList[i].SelectSingleNode("itunes:image", nsmgr).Attributes["href"].Value;
+                            string imageUrl = "null";
+                            if (nodeList[i].SelectSingleNode("itunes:image", nsmgr) != null)
+                            {
+                                imageUrl = nodeList[i].SelectSingleNode("itunes:image", nsmgr).Attributes["href"].Value;
+                            }
 
                             string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
 
