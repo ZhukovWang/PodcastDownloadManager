@@ -1,6 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Xml;
 using NFlags;
 
@@ -23,6 +26,8 @@ namespace PodcastDownloadManager.Podcast
                 </body>
             </opml>
          */
+
+        private const int MaxConcurrentFeedDownloads = 8;
 
         private static Dictionary<string, string> _podcastsDictionary = new Dictionary<string, string>();
 
@@ -61,23 +66,51 @@ namespace PodcastDownloadManager.Podcast
 
             _podcastsDictionary = new Dictionary<string, string>();
 
-            XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(ProgramConfiguration.PodcastFileName);
-
-            XmlElement root = xmlDoc.DocumentElement;
-
-            XmlNode outline = root.GetElementsByTagName("body")[0].FirstChild;
-
-            XmlNodeList allPodcastNodes = outline.ChildNodes;
-
-            for (int i = 0; i < allPodcastNodes.Count; i++)
+            if (!File.Exists(ProgramConfiguration.PodcastFileName))
             {
-                string podcastName = allPodcastNodes[i].Attributes["text"].Value;
-                string podcastUrl = allPodcastNodes[i].Attributes["xmlUrl"].Value;
-                _podcastsDictionary.Add(podcastName, podcastUrl);
+                Logger.Log.Warn($"The opml file does not exist. Path is {ProgramConfiguration.PodcastFileName}.");
+                return;
             }
 
-            Logger.Log.Info("Finish get all have podcasts info.");
+            var xmlDoc = new XmlDocument { XmlResolver = null };
+
+            using (var reader = XmlReader.Create(ProgramConfiguration.PodcastFileName, new XmlReaderSettings
+                   {
+                       DtdProcessing = DtdProcessing.Prohibit,
+                       XmlResolver = null,
+                       IgnoreComments = true,
+                   }))
+            {
+                xmlDoc.Load(reader);
+            }
+
+            XmlNodeList bodyNodes = xmlDoc.DocumentElement?.GetElementsByTagName("body");
+
+            XmlNode outline = bodyNodes != null && bodyNodes.Count > 0 ? bodyNodes[0].FirstChild : null;
+
+            if (outline == null)
+            {
+                Logger.Log.Warn("The opml file does not have any outline.");
+                return;
+            }
+
+            foreach (XmlNode node in outline.ChildNodes)
+            {
+                string podcastName = node.Attributes?["text"]?.Value;
+                string podcastUrl = node.Attributes?["xmlUrl"]?.Value;
+
+                if (string.IsNullOrEmpty(podcastName) || string.IsNullOrEmpty(podcastUrl))
+                {
+                    Logger.Log.Warn("An outline without 'text' or 'xmlUrl' was skipped.");
+                    continue;
+                }
+
+                // Indexer instead of Add: a hand-edited opml can contain the same name twice, and
+                // that should update the url rather than throw.
+                _podcastsDictionary[podcastName] = podcastUrl;
+            }
+
+            Logger.Log.Info($"Finish get all have podcasts info. {_podcastsDictionary.Count} podcast(s).");
         }
 
         private static void SaveNewOpml()
@@ -125,7 +158,7 @@ namespace PodcastDownloadManager.Podcast
         /// Add a new podcast
         /// </summary>
         /// <param name="url">podcast url</param>
-        /// <returns>podcast name</returns>
+        /// <returns>podcast name, or null when the feed could not be read</returns>
         public static string AddPodcast(string url)
         {
             GetAllPodcast();
@@ -133,6 +166,12 @@ namespace PodcastDownloadManager.Podcast
             Logger.Log.Info("Get the url's name.");
             string podcastName = GetPodcastName(url);
             Logger.Log.Info($"Finish get the url's name. Podcast name is {podcastName}");
+
+            if (string.IsNullOrEmpty(podcastName))
+            {
+                Logger.Log.Warn($"The feed of {url} could not be read, nothing was added.");
+                return null;
+            }
 
             if (!_podcastsDictionary.ContainsKey(podcastName))
             {
@@ -193,78 +232,188 @@ namespace PodcastDownloadManager.Podcast
             }
         }
 
-        public static string ShowPodcastDetail(string name)
+        /// <summary>
+        /// Shows the detail of a podcast.
+        /// </summary>
+        /// <param name="name">Podcast name.</param>
+        /// <param name="refresh">
+        /// When false the cached feed is reused, so 'show' does not cost a network round trip. Pass
+        /// true to download the feed first.
+        /// </param>
+        public static string ShowPodcastDetail(string name, bool refresh = false)
         {
             GetAllPodcast();
-            string url;
-            Logger.Log.Info("Get the name's podcast info.");
 
-            try
-            {
-                url = _podcastsDictionary[name];
-            }
-            catch
+            if (!_podcastsDictionary.TryGetValue(name, out string url))
             {
                 Logger.Log.Warn("The name is not in the dictionary.");
                 return "Error.Input of Name does not contain in the library.";
             }
 
-            Podcast podcast = new Podcast(name, url);
+            Podcast podcast = new Podcast(name, url, !refresh && Podcast.HasCache(name));
+
+            if (!podcast.FeedAvailable())
+            {
+                return "Error. The feed of this podcast is not available. Run 'pdlm update' first.";
+            }
 
             Logger.Log.Info("Get the podcast detail.");
             return podcast.GetPodcastDetail();
         }
 
+        /// <summary>
+        /// Refreshes every feed, then reports and queues the new releases.
+        /// </summary>
+        /// <remarks>
+        /// The feeds are downloaded concurrently (they are independent and network bound), but the
+        /// results are reported and appended in library order on a single thread: the download list
+        /// is one shared file, so writing it in parallel would only add locking.
+        /// </remarks>
         public static int UpdateAllPodcasts(ref IOutput output)
         {
-            int updateCount = 0;
-
             GetAllPodcast();
 
-            foreach (var podcast in _podcastsDictionary)
+            if (_podcastsDictionary.Count == 0)
             {
-                Podcast p = new Podcast(podcast.Key, podcast.Value, true);
-
-                p.GetPodcastNewlyRelease(ref output, ref updateCount);
+                output.WriteLine("The library is empty. Use 'pdlm add <url>' first.");
+                return 0;
             }
 
-            return updateCount;
+            var feeds = new List<KeyValuePair<string, string>>(_podcastsDictionary);
+
+            int concurrency = Math.Min(feeds.Count, Math.Min(MaxConcurrentFeedDownloads, Math.Max(1, System.Environment.ProcessorCount * 2)));
+
+            Logger.Log.Info($"Update {feeds.Count} podcast(s) with {concurrency} concurrent download(s).");
+
+            var results = new FeedUpdateResult[feeds.Count];
+
+            using (var gate = new SemaphoreSlim(concurrency, concurrency))
+            {
+                var tasks = new Task[feeds.Count];
+
+                for (int i = 0; i < feeds.Count; i++)
+                {
+                    int index = i;
+                    Podcast podcast = new Podcast(feeds[index].Key, feeds[index].Value, true);
+
+                    tasks[index] = Task.Run(async () =>
+                    {
+                        await gate.WaitAsync().ConfigureAwait(false);
+
+                        try
+                        {
+                            results[index] = podcast.CollectNewlyReleases();
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.Log.Error($"Update {feeds[index].Key} failed. Exception is {e}");
+                            results[index] = new FeedUpdateResult
+                            {
+                                PodcastName = feeds[index].Key,
+                                Url = feeds[index].Value,
+                                Error = e.Message,
+                            };
+                        }
+                        finally
+                        {
+                            gate.Release();
+                        }
+                    });
+                }
+
+                Task.WhenAll(tasks).GetAwaiter().GetResult();
+            }
+
+            var pending = new List<NewlyRelease>();
+
+            foreach (FeedUpdateResult result in results)
+            {
+                if (result == null)
+                {
+                    continue;
+                }
+
+                if (!result.Success)
+                {
+                    output.WriteLine($"* Failed to update {result.PodcastName}: {result.Error}");
+                    continue;
+                }
+
+                foreach (NewlyRelease release in result.Releases)
+                {
+                    string published = release.PublishedUtc.ToString("yyyy-MM-dd", DateTimeFormatInfo.InvariantInfo);
+
+                    output.WriteLine($"* {release.PodcastName} - {release.Title} - {published}");
+
+                    pending.Add(release);
+                    Podcast.WriteMetadata(ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath, release);
+                }
+            }
+
+            if (pending.Count > 0)
+            {
+                AppendDownloadEntries(pending);
+            }
+
+            Logger.Log.Info($"Update finished. {pending.Count} new release(s).");
+
+            return pending.Count;
+        }
+
+        private static void AppendDownloadEntries(List<NewlyRelease> releases)
+        {
+            string downloadProgram = ProgramConfiguration.DownloadConfigurations.DownloadProgram;
+            string downloadPath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath;
+
+            using var fs = new FileStream(ProgramConfiguration.PodcastNewlyReleaseInfo, FileMode.Append,
+                FileAccess.Write, FileShare.Read);
+
+            foreach (NewlyRelease release in releases)
+            {
+                Podcast.AppendDownloadEntry(fs, downloadProgram, downloadPath, release.DownloadUrl, release.FileName);
+            }
         }
 
         public static void DownloadPodcastAfterDate(DateTime dt, string downloadFileDirectory, bool isSimpleFile, string downloadProgram)
         {
             GetAllPodcast();
 
-            ProgramConfiguration.DownloadFileName = downloadFileDirectory + Path.DirectorySeparatorChar + "PodcastDownload.txt";
+            ProgramConfiguration.DownloadFileName = Path.Combine(downloadFileDirectory, "PodcastDownload.txt");
 
             FileStream fs = File.Create(ProgramConfiguration.DownloadFileName);
 
-            foreach (var podcast in _podcastsDictionary)
+            try
             {
-                Podcast p = new Podcast(podcast.Key, podcast.Value, true);
+                foreach (var podcast in _podcastsDictionary)
+                {
+                    Podcast p = new Podcast(podcast.Key, podcast.Value, Podcast.HasCache(podcast.Key));
 
-                p.BuildPodcastDownloadFile(dt, downloadFileDirectory, isSimpleFile, downloadProgram, ref fs);
+                    p.BuildPodcastDownloadFile(dt, downloadFileDirectory, isSimpleFile, downloadProgram, ref fs);
+                }
             }
-
-            fs.Close();
+            finally
+            {
+                fs.Close();
+            }
         }
 
         public static int ListPodcastAllRelease(string name, ref IOutput output)
         {
             GetAllPodcast();
-            string url;
 
-            try
-            {
-                url = _podcastsDictionary[name];
-            }
-            catch
+            if (!_podcastsDictionary.TryGetValue(name, out string url))
             {
                 output.WriteLine("Error. Input of Name does not contain in the library.");
                 return -1;
             }
 
-            Podcast podcast = new Podcast(name, url);
+            Podcast podcast = new Podcast(name, url, Podcast.HasCache(name));
+
+            if (!podcast.FeedAvailable())
+            {
+                output.WriteLine("Error. The feed of this podcast is not available. Run 'pdlm update' first.");
+                return -1;
+            }
 
             podcast.GetPodcastAllReleaseDetail(ref output);
 
@@ -275,27 +424,32 @@ namespace PodcastDownloadManager.Podcast
         {
             GetAllPodcast();
 
-            string url;
-            try
-            {
-                url = _podcastsDictionary[name];
-            }
-            catch
+            if (!_podcastsDictionary.TryGetValue(name, out string url))
             {
                 return -1;
             }
 
-            Podcast podcast = new Podcast(name, url);
+            Podcast podcast = new Podcast(name, url, Podcast.HasCache(name));
 
-            ProgramConfiguration.DownloadFileName = downloadFileDirectory + Path.DirectorySeparatorChar + "PodcastDownload.txt";
+            if (!podcast.FeedAvailable())
+            {
+                return -1;
+            }
+
+            ProgramConfiguration.DownloadFileName = Path.Combine(downloadFileDirectory, "PodcastDownload.txt");
 
             Logger.Log.Info($"Create DownloadFile, is {ProgramConfiguration.DownloadFileName}.");
 
             FileStream fs = File.Create(ProgramConfiguration.DownloadFileName);
 
-            podcast.DownloadSelectIndexRelease(selectIndex, downloadFileDirectory, isSimpleFile, downloadProgram, ref fs);
-
-            fs.Close();
+            try
+            {
+                podcast.DownloadSelectIndexRelease(selectIndex, downloadFileDirectory, isSimpleFile, downloadProgram, ref fs);
+            }
+            finally
+            {
+                fs.Close();
+            }
 
             return 0;
         }

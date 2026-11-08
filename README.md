@@ -1,6 +1,6 @@
 # Podcast Download Manager
 
-![.NET Core](https://github.com/ZhukovWang/PodcastDownloadManager/workflows/.NET%20Core/badge.svg)
+![.NET](https://github.com/ZhukovWang/PodcastDownloadManager/workflows/.NET%20Core/badge.svg)
 
 Podcast Download Manager is a commandline podcast manager and provides commands for managing and downloading podcast.
 
@@ -10,7 +10,7 @@ Support [Aria2](https://aria2.github.io/) and [Internet Download Manager](http:/
 
 ## Build
 
-Use [.Net Core](https://dotnet.microsoft.com/) to build.
+Use [.NET 10](https://dotnet.microsoft.com/) to build.
 
 ```bash
 $ cd PodcastDownloadManager
@@ -21,7 +21,7 @@ $ dotnet build
 
 ### Prepare
 
-Install [.Net Core runtime](https://dotnet.microsoft.com/).
+Install [.NET 10 runtime](https://dotnet.microsoft.com/).
 
 Install [Aria2](https://aria2.github.io/) or [Internet Download Manager](http://www.internetdownloadmanager.com/) for automatic download.
 
@@ -68,6 +68,13 @@ Display information about a podcast and newly release.
 $ pdlm show podcast_name
 ```
 
+By default this reuses the feed that `update` downloaded, so it answers immediately and does not
+cost a network round trip. Add `--refresh` (`-r`) to download the feed first.
+
+```bash
+$ pdlm show podcast_name --refresh
+```
+
 ### list
 
 List added podcasts.
@@ -79,6 +86,9 @@ $ pdlm list
 ### update
 
 Update the podcast newly release.
+
+The feeds are downloaded in parallel, so updating a library of dozens of podcasts takes about as
+long as the slowest feed rather than the sum of all of them.
 
 ```bash
 $ pdlm update

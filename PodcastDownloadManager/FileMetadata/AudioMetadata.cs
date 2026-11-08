@@ -1,4 +1,4 @@
-﻿using NFlags;
+using NFlags;
 using System;
 using System.IO;
 using TagLib;
@@ -92,7 +92,7 @@ namespace PodcastDownloadManager.FileMetadata
 
                             try
                             {
-                                DownloadHelper.DownloadFileAsync(audioImageUrl, imageName).Wait();
+                                DownloadHelper.DownloadFileAsync(audioImageUrl, imageName).GetAwaiter().GetResult();
                                 audioFile.Tag.Pictures = new IPicture[] { new Picture(imageName) };
                             }
                             catch (Exception e)
