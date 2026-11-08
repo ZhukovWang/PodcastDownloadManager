@@ -341,3 +341,6 @@ healthchecksdb
 
 .vscode
 global.json
+
+# The repository pins the test runner (Microsoft.Testing.Platform) instead of the SDK version.
+!global.json

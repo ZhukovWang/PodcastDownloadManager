@@ -17,6 +17,25 @@ $ cd PodcastDownloadManager
 $ dotnet build
 ```
 
+## Test
+
+```bash
+$ dotnet run --project PodcastDownloadManager.Tests
+```
+
+The tests are xunit v3 on [Microsoft.Testing.Platform](https://learn.microsoft.com/dotnet/core/testing/unit-testing-platform-intro):
+the test project builds to an executable that runs its own tests, so this command needs no test host
+and no package restore for test tooling.
+
+`dotnet test` drives the same executable (see `global.json`). Use it when you want the TRX/JUnit
+reporters or IDE integration, but note that it needs a named pipe between the SDK and the test
+process; on machines that block named pipe connections it fails during the handshake and reports
+"zero tests run", which is an environment limitation rather than a test failure.
+
+The tests never reach the network: the feed tests run against a loopback HTTP server
+(`Support/FakeFeedServer.cs`), and each test points the pdlm paths at its own temporary directory
+(`Support/TestWorkspace.cs`).
+
 ## Usage
 
 ### Prepare

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
@@ -23,33 +23,59 @@ namespace PodcastDownloadManager
         /// <summary>
         /// pdlm location
         /// </summary>
-        private static readonly string Local =
-            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        private static string _local = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? AppContext.BaseDirectory;
 
         /// <summary>
         /// config file path
         /// </summary>
-        public static readonly string ConfigFilePathName = Local + Path.DirectorySeparatorChar + "config.json";
+        public static string ConfigFilePathName { get; private set; }
 
         /// <summary>
         /// podcast xml saved directory
         /// </summary>
-        public static readonly string PodcastsFileDirectory = Local + Path.DirectorySeparatorChar + "PodcastsFile";
+        public static string PodcastsFileDirectory { get; private set; }
 
         /// <summary>
         /// podcast newly release download info file
         /// </summary>
-        public static readonly string PodcastNewlyReleaseInfo = Local + Path.DirectorySeparatorChar + "NewlyReleaseInfo.txt";
+        public static string PodcastNewlyReleaseInfo { get; private set; }
 
         /// <summary>
         /// all podcast info file
         /// </summary>
-        public static readonly string PodcastFileName = Local + Path.DirectorySeparatorChar + "podcasts.opml";
+        public static string PodcastFileName { get; private set; }
 
         /// <summary>
         /// podcast download info file
         /// </summary>
-        public static string DownloadFileName = DownloadConfigurations.DownloadPodcastPath + Path.DirectorySeparatorChar + "PodcastDownload.txt";
+        public static string DownloadFileName { get; set; }
+
+        static ProgramConfiguration()
+        {
+            UseDirectory(_local);
+        }
+
+        /// <summary>
+        /// pdlm location
+        /// </summary>
+        public static string Local => _local;
+
+        /// <summary>
+        /// Points every path at <paramref name="directory"/>. The tests call this to keep each run in
+        /// a temporary directory instead of the build output.
+        /// </summary>
+        internal static void UseDirectory(string directory)
+        {
+            _local = directory;
+
+            ConfigFilePathName = Path.Combine(directory, "config.json");
+            PodcastsFileDirectory = Path.Combine(directory, "PodcastsFile");
+            PodcastNewlyReleaseInfo = Path.Combine(directory, "NewlyReleaseInfo.txt");
+            PodcastFileName = Path.Combine(directory, "podcasts.opml");
+
+            DownloadFileName = Path.Combine(DownloadConfigurations.DownloadPodcastPath ?? directory,
+                "PodcastDownload.txt");
+        }
 
         public static void CreateConfig()
         {
