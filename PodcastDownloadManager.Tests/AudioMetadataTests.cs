@@ -58,10 +58,43 @@ namespace PodcastDownloadManager.Tests
             var output = new RecordingOutput();
             IOutput outputRef = output;
 
-            AudioMetadata.AutoAddMetadata(ref outputRef);
+            int failures = AudioMetadata.AutoAddMetadata(ref outputRef);
 
+            Assert.Equal(1, failures);
             Assert.True(output.Contains("does NOT exist"));
             Assert.True(File.Exists(metadataPath));
+        }
+
+        [Fact]
+        public void Auto_metadata_reports_a_malformed_sidecar()
+        {
+            string metadataPath = Path.Combine(_workspace.DownloadDirectory, "broken.metadata");
+
+            File.WriteAllLines(metadataPath, new[] { "only", "three", "lines" });
+
+            var output = new RecordingOutput();
+            IOutput outputRef = output;
+
+            int failures = AudioMetadata.AutoAddMetadata(ref outputRef);
+
+            Assert.Equal(1, failures);
+            Assert.True(output.Contains("not a valid metadata file"));
+            Assert.True(File.Exists(metadataPath));
+        }
+
+        [Fact]
+        public void Auto_metadata_reports_a_missing_download_directory()
+        {
+            ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath =
+                Path.Combine(_workspace.Root, "missing");
+
+            var output = new RecordingOutput();
+            IOutput outputRef = output;
+
+            int failures = AudioMetadata.AutoAddMetadata(ref outputRef);
+
+            Assert.Equal(1, failures);
+            Assert.True(output.Contains("does not exist"));
         }
 
         [Fact]
@@ -70,8 +103,7 @@ namespace PodcastDownloadManager.Tests
             var output = new RecordingOutput();
             IOutput outputRef = output;
 
-            AudioMetadata.AutoAddMetadata(ref outputRef);
-
+            Assert.Equal(0, AudioMetadata.AutoAddMetadata(ref outputRef));
             Assert.Empty(output.Lines);
         }
     }

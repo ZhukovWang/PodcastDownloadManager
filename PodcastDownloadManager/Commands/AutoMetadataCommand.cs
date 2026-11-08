@@ -1,4 +1,4 @@
-﻿using NFlags;
+using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.FileMetadata;
 
@@ -19,12 +19,13 @@ namespace PodcastDownloadManager.Commands
         {
             Logger.Log.Info("Enter AutoMetadata command.");
 
-            AudioMetadata.AutoAddMetadata(ref output);
+            int failures = AudioMetadata.AutoAddMetadata(ref output);
 
             Logger.Log.Info("Finish AutoMetadata.");
 
-            output.WriteLine("Done.");
-            return 0;
+            output.WriteLine(failures == 0 ? "Done." : $"Done with {failures} failure(s).");
+
+            return failures == 0 ? ExitCode.Success : ExitCode.Failure;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using NFlags;
+using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.Podcast;
 
@@ -24,11 +24,18 @@ namespace PodcastDownloadManager.Commands
             output.WriteLine("Updating...");
             Logger.Log.Info("Show the update results.");
 
-            int count = Opml.UpdateAllPodcasts(ref output);
+            int count = Opml.UpdateAllPodcasts(ref output, out int failedCount);
 
-            output.WriteLine(count == 0 ? "All up-to-date." : "pdlm was updated successfully!");
+            if (failedCount > 0)
+            {
+                output.WriteLine($"Update finished with {failedCount} failed feed(s).");
+            }
+            else
+            {
+                output.WriteLine(count == 0 ? "All up-to-date." : "pdlm was updated successfully!");
+            }
 
-            return 0;
+            return failedCount == 0 ? ExitCode.Success : ExitCode.Failure;
         }
     }
 }

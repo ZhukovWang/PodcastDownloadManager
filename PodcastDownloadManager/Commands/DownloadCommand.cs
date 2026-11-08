@@ -1,4 +1,4 @@
-﻿using NFlags;
+using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.Podcast;
 using System;
@@ -27,6 +27,24 @@ namespace PodcastDownloadManager.Commands
                 .SetExecute(Execute);
         }
 
+        /// <summary>
+        /// Parses the command's <c>yyyyMMdd</c> date as local midnight and converts it to UTC, so it
+        /// lines up with the UTC publication dates stored by the feed parser.
+        /// </summary>
+        internal static bool TryParseDate(string value, out DateTime utc)
+        {
+            if (!DateTime.TryParseExact(value, "yyyyMMdd", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out DateTime localDate))
+            {
+                utc = default;
+                return false;
+            }
+
+            DateTime local = DateTime.SpecifyKind(localDate, DateTimeKind.Local);
+            utc = local.ToUniversalTime();
+            return true;
+        }
+
         private static int Execute(CommandArgs commandArgs, IOutput output)
         {
             Logger.Log.Info("Enter Download command.");
@@ -47,7 +65,7 @@ namespace PodcastDownloadManager.Commands
                 {
                     Logger.Log.Info($"Directory \"{podcastsDownloadDirectory}\" is not valid.");
                     output.WriteLine("Error. Input of 'dir' is illegal.");
-                    return 0;
+                    return ExitCode.Failure;
                 }
             }
 
@@ -56,52 +74,54 @@ namespace PodcastDownloadManager.Commands
             Logger.Log.Info($"Download simple file is {isSimpleFile}.");
 
             string date = commandArgs.GetParameter<string>(Date);
-            DateTime dt;
-            try
-            {
-                dt = DateTime.ParseExact(date, "yyyyMMdd", new CultureInfo("en-US"));
 
-                Logger.Log.Info($"Download date is {dt.ToString("G")}.");
-            }
-            catch
+            if (!TryParseDate(date, out DateTime dt))
             {
                 Logger.Log.Warn($"Download date is not valid.");
 
                 output.WriteLine("Error. Input of 'date' is illegal.");
-                return 0;
+                return ExitCode.Failure;
             }
+
+            Logger.Log.Info($"Download date is {dt.ToString("G")} (UTC).");
 
             output.WriteLine("Building downloading file...");
 
             Logger.Log.Info("Build download file.");
 
-            Opml.DownloadPodcastAfterDate(dt, podcastsDownloadDirectory, isSimpleFile, ProgramConfiguration.DownloadConfigurations.DownloadProgram);
+            int failedFeeds = Opml.DownloadPodcastAfterDate(dt, podcastsDownloadDirectory, isSimpleFile,
+                ProgramConfiguration.DownloadConfigurations.DownloadProgram, ref output);
 
             Logger.Log.Info("Finish build download file.");
 
             output.WriteLine("Building done");
 
+            int exitCode = failedFeeds == 0 ? ExitCode.Success : ExitCode.Failure;
+
             if (!isSimpleFile)
             {
                 output.WriteLine("Downloading...");
 
-                if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.Aria2Name)
-                {
-                    Logger.Log.Info("Start download newly release use aria2.");
+                Logger.Log.Info(
+                    $"Start download use {ProgramConfiguration.DownloadConfigurations.DownloadProgram}.");
 
-                    DownloadTools.DownloadAria2(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.DownloadFileName, output);
-                }
-                else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.IdmName)
-                {
-                    Logger.Log.Info("Start download newly release use idm.");
+                int downloadExitCode = DownloadTools.Download(
+                    ProgramConfiguration.DownloadConfigurations.DownloadProgram,
+                    ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName,
+                    ProgramConfiguration.DownloadFileName, output);
 
-                    DownloadTools.DownloadIdm(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.DownloadFileName, output);
+                if (downloadExitCode != ExitCode.Success)
+                {
+                    Logger.Log.Warn($"The downloader exited with code {downloadExitCode}.");
+                    output.WriteLine($"The downloader exited with code {downloadExitCode}.");
+                    exitCode = ExitCode.Failure;
                 }
 
                 Logger.Log.Info("Finish download.");
                 output.WriteLine("Done.");
             }
-            return 0;
+
+            return exitCode;
         }
     }
 }

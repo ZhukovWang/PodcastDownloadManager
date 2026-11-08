@@ -38,7 +38,7 @@ namespace PodcastDownloadManager.Commands
                 Logger.Log.Warn("The Add command input string is NOT a valid url.");
 
                 output.WriteLine("URL is not valid.");
-                return 0;
+                return ExitCode.Failure;
             }
 
             Logger.Log.Info("The Add command input string is a valid url.");
@@ -63,7 +63,7 @@ namespace PodcastDownloadManager.Commands
                 Logger.Log.Warn($"Url has NOT been added, the feed could not be read. URL: {url}.");
 
                 output.WriteLine("Could not read the podcast feed. Please check the URL and try again.");
-                return 0;
+                return ExitCode.Failure;
             }
 
             output.WriteLine("Have added a new podcast.");
@@ -71,7 +71,7 @@ namespace PodcastDownloadManager.Commands
             output.WriteLine($"URL: {url}");
             Logger.Log.Info($"Url has been added. Name: {podcastName}; URL: {url}.");
 
-            return 0;
+            return ExitCode.Success;
         }
     }
 }

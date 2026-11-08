@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
@@ -53,12 +53,36 @@ namespace PodcastDownloadManager.Commands
                 ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath, false,
                 ProgramConfiguration.DownloadConfigurations.DownloadProgram);
 
-            if (res != 0)
+            if (res == -1)
             {
                 Logger.Log.Warn("The input name is NOT in the library.");
 
                 output.WriteLine("Error. Input of Name does not contain in the library.");
-                return 0;
+                return ExitCode.Failure;
+            }
+
+            if (res == -2)
+            {
+                Logger.Log.Warn("The feed of the podcast could not be read.");
+
+                output.WriteLine("Error. The feed of this podcast is not available or could not be read. Run 'pdlm update' first.");
+                return ExitCode.Failure;
+            }
+
+            if (res == -3)
+            {
+                Logger.Log.Warn("None of the selected releases could be downloaded.");
+
+                output.WriteLine("Error. None of the selected indexes matched a downloadable release.");
+                return ExitCode.Failure;
+            }
+
+            if (res != 0)
+            {
+                Logger.Log.Warn($"Could not build the download list. Result is {res}.");
+
+                output.WriteLine("Error. Could not build the download list.");
+                return ExitCode.Failure;
             }
 
             output.WriteLine("Building done");
@@ -67,24 +91,23 @@ namespace PodcastDownloadManager.Commands
 
             output.WriteLine("Downloading...");
 
-            if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.Aria2Name)
-            {
-                Logger.Log.Info("Start download newly release use aria2.");
+            int downloadExitCode = DownloadTools.Download(
+                ProgramConfiguration.DownloadConfigurations.DownloadProgram,
+                ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName,
+                ProgramConfiguration.DownloadFileName, output);
 
-                DownloadTools.DownloadAria2(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.DownloadFileName, output);
-            }
-            else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.IdmName)
+            if (downloadExitCode != ExitCode.Success)
             {
-                Logger.Log.Info("Start download newly release use idm.");
-
-                DownloadTools.DownloadIdm(ProgramConfiguration.DownloadConfigurations.DownloadProgramPathName, ProgramConfiguration.DownloadFileName, output);
+                Logger.Log.Warn($"The downloader exited with code {downloadExitCode}.");
+                output.WriteLine($"The downloader exited with code {downloadExitCode}.");
+                return ExitCode.Failure;
             }
 
             Logger.Log.Info("Finish download.");
 
             output.WriteLine("Done.");
 
-            return 0;
+            return ExitCode.Success;
         }
     }
 

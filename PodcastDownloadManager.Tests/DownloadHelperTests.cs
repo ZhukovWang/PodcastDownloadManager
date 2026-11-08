@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using PodcastDownloadManager.Tests.Support;
@@ -94,6 +95,54 @@ namespace PodcastDownloadManager.Tests
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => DownloadHelper.DownloadFileAsync("not a url", Path.Combine(_workspace.Root, "f.xml"),
                     TestContext.Current.CancellationToken));
+        }
+
+        [Fact]
+        public async Task Stops_after_the_configured_number_of_attempts()
+        {
+            ProgramConfiguration.DownloadConfigurations.FeedDownloadMaxAttempts = 2;
+
+            _server.FailWith("feed.xml", 500);
+
+            await Assert.ThrowsAsync<HttpRequestException>(
+                () => DownloadHelper.DownloadFileAsync(_server.Url("feed.xml"),
+                    Path.Combine(_workspace.Root, "f.xml"), TestContext.Current.CancellationToken));
+
+            Assert.Equal(2, _server.Hits("feed.xml"));
+        }
+
+        [Fact]
+        public async Task Does_not_retry_when_the_configured_attempts_is_one()
+        {
+            ProgramConfiguration.DownloadConfigurations.FeedDownloadMaxAttempts = 1;
+
+            _server.FailOnce("feed.xml", 500, "recovered");
+
+            await Assert.ThrowsAsync<HttpRequestException>(
+                () => DownloadHelper.DownloadFileAsync(_server.Url("feed.xml"),
+                    Path.Combine(_workspace.Root, "f.xml"), TestContext.Current.CancellationToken));
+
+            Assert.Equal(1, _server.Hits("feed.xml"));
+        }
+
+        [Fact]
+        public async Task Uses_the_configured_request_timeout()
+        {
+            ProgramConfiguration.DownloadConfigurations.FeedRequestTimeoutSeconds = 1;
+            ProgramConfiguration.DownloadConfigurations.FeedDownloadMaxAttempts = 1;
+
+            _server.Serve("slow.xml", "body", delayMs: 5000);
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => DownloadHelper.DownloadFileAsync(_server.Url("slow.xml"),
+                    Path.Combine(_workspace.Root, "f.xml"), TestContext.Current.CancellationToken));
+
+            stopwatch.Stop();
+
+            Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
+                $"The request took {stopwatch.Elapsed}, so the configured timeout was not used.");
         }
     }
 }

@@ -19,13 +19,26 @@ namespace PodcastDownloadManager;
 /// </summary>
 public static class DownloadHelper
 {
-    private const int MaxAttempts = 3;
-
     private const int BufferSize = 64 * 1024;
 
-    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
-
     private static readonly HttpClient HttpClient = CreateHttpClient();
+
+    /// <summary>
+    /// Attempts configured for one download, clamped to a sane range so a malformed config file
+    /// cannot turn a retry loop into an infinite one.
+    /// </summary>
+    private static int GetMaxAttempts()
+    {
+        return Math.Clamp(ProgramConfiguration.DownloadConfigurations.FeedDownloadMaxAttempts,
+            DownloadConfiguration.MinFeedDownloadMaxAttempts, DownloadConfiguration.MaxFeedDownloadMaxAttempts);
+    }
+
+    private static TimeSpan GetRequestTimeout()
+    {
+        return TimeSpan.FromSeconds(Math.Clamp(
+            ProgramConfiguration.DownloadConfigurations.FeedRequestTimeoutSeconds,
+            DownloadConfiguration.MinFeedRequestTimeoutSeconds, DownloadConfiguration.MaxFeedRequestTimeoutSeconds));
+    }
 
     private static HttpClient CreateHttpClient()
     {
@@ -68,19 +81,22 @@ public static class DownloadHelper
 
         string partPath = outputPath + ".part";
 
+        int maxAttempts = GetMaxAttempts();
+        TimeSpan requestTimeout = GetRequestTimeout();
+
         for (int attempt = 1; ; attempt++)
         {
             try
             {
-                await DownloadOnceAsync(uriResult, partPath, cancellationToken).ConfigureAwait(false);
+                await DownloadOnceAsync(uriResult, partPath, requestTimeout, cancellationToken).ConfigureAwait(false);
 
                 File.Move(partPath, outputPath, true);
                 return;
             }
-            catch (Exception e) when (attempt < MaxAttempts && IsTransient(e, cancellationToken))
+            catch (Exception e) when (attempt < maxAttempts && IsTransient(e, cancellationToken))
             {
                 Logger.Log.Warn(
-                    $"Download of \"{uri}\" failed (attempt {attempt}/{MaxAttempts}): {e.Message}. Retrying.");
+                    $"Download of \"{uri}\" failed (attempt {attempt}/{maxAttempts}): {e.Message}. Retrying.");
 
                 await Task.Delay(TimeSpan.FromMilliseconds(300 * attempt), cancellationToken).ConfigureAwait(false);
             }
@@ -91,10 +107,11 @@ public static class DownloadHelper
         }
     }
 
-    private static async Task DownloadOnceAsync(Uri uri, string partPath, CancellationToken cancellationToken)
+    private static async Task DownloadOnceAsync(Uri uri, string partPath, TimeSpan requestTimeout,
+        CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(RequestTimeout);
+        timeout.CancelAfter(requestTimeout);
 
         using HttpResponseMessage response = await HttpClient
             .GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, timeout.Token)

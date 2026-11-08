@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml;
+using System.Xml.Linq;
 using PodcastDownloadManager.FileMetadata;
 using NFlags;
 
@@ -53,7 +54,7 @@ namespace PodcastDownloadManager.Podcast
 
     public class Podcast
     {
-        private const string ItunesNamespace = "http://www.itunes.com/dtds/podcast-1.0.dtd";
+        private static readonly XNamespace Itunes = "http://www.itunes.com/dtds/podcast-1.0.dtd";
 
         private static readonly XmlReaderSettings FeedReaderSettings = new XmlReaderSettings
         {
@@ -68,6 +69,18 @@ namespace PodcastDownloadManager.Podcast
         public readonly string Name;
 
         private readonly string _fileName;
+
+        /// <summary>
+        /// Feed fields extracted on first use and reused for the lifetime of this instance. The XML
+        /// is streamed and only the fields the program needs are kept, so a large feed does not stay
+        /// in memory as a DOM and is parsed at most once per command.
+        /// </summary>
+        private ParsedFeed _feed;
+
+        /// <summary>
+        /// True when the last attempted feed download failed. The cached copy may still be usable.
+        /// </summary>
+        public bool DownloadFailed { get; private set; }
 
         /// <summary>
         /// Reads the name of an unknown podcast from its feed. <see cref="Name"/> is null when the
@@ -129,6 +142,7 @@ namespace PodcastDownloadManager.Podcast
             }
             catch (Exception e)
             {
+                DownloadFailed = true;
                 Console.WriteLine($"Download \"{_url}\" failed.");
                 Logger.Log.Error($"Download failed. File path is {_fileName}. Exception is {e}");
                 return false;
@@ -136,15 +150,20 @@ namespace PodcastDownloadManager.Podcast
 
             Logger.Log.Info($"Download finish. File path is {_fileName}.");
 
+            DownloadFailed = false;
+
+            // A new file invalidates anything parsed from the previous copy.
+            _feed = null;
+
             return true;
         }
 
         private string GetPodcastName()
         {
-            XmlDocument xmlDoc;
+            ParsedFeed feed;
             try
             {
-                xmlDoc = LoadFeed();
+                feed = LoadFeed();
             }
             catch (Exception e)
             {
@@ -152,15 +171,13 @@ namespace PodcastDownloadManager.Podcast
                 return null;
             }
 
-            string name = GetChildText(GetChannel(xmlDoc), "title");
-
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(feed.Title))
             {
                 Logger.Log.Error($"The feed of {_url} does not have a channel title.");
                 return null;
             }
 
-            return GetValidName(name.Trim().Replace(" ", ""));
+            return GetValidName(feed.Title.Trim().Replace(" ", ""));
         }
 
         public string GetPodcastDetail()
@@ -170,13 +187,14 @@ namespace PodcastDownloadManager.Podcast
                 return "Error. The feed of this podcast is not available. Run 'pdlm update' first.";
             }
 
-            XmlDocument xmlDoc = LoadFeed();
-            XmlNode channel = GetChannel(xmlDoc);
+            ParsedFeed feed = LoadFeed();
 
-            string title = GetChildText(channel, "title") ?? Name;
-            string description = RemoveStripHtml(GetChildText(channel, "description") ?? string.Empty);
+            EnsureChannel(feed);
 
-            XmlNode newlyRelease = GetReleaseNodes(channel).FirstOrDefault();
+            string title = feed.Title ?? Name;
+            string description = RemoveStripHtml(feed.Description ?? string.Empty);
+
+            ParsedItem newlyRelease = feed.Items.FirstOrDefault();
 
             if (newlyRelease == null)
             {
@@ -185,12 +203,12 @@ namespace PodcastDownloadManager.Podcast
                        "Newly release: none";
             }
 
-            string newlyReleaseTitle = GetChildText(newlyRelease, "title") ?? string.Empty;
-            string newlyReleaseDescription = RemoveStripHtml(GetChildText(newlyRelease, "description") ?? string.Empty);
-            string newlyReleaseDownloadUrl = GetAttribute(newlyRelease, "enclosure", "url") ?? "null";
+            string newlyReleaseTitle = newlyRelease.Title ?? string.Empty;
+            string newlyReleaseDescription = RemoveStripHtml(newlyRelease.Description ?? string.Empty);
+            string newlyReleaseDownloadUrl = newlyRelease.EnclosureUrl ?? "null";
 
-            string newlyReleasePubDate = TryParseUtc(GetChildText(newlyRelease, "pubDate"), out DateTime dt)
-                ? dt.ToString("G")
+            string newlyReleasePubDate = newlyRelease.PublishedUtc.HasValue
+                ? newlyRelease.PublishedUtc.Value.ToString("G")
                 : "unknown";
 
             return $"Title: {title}\n" +
@@ -231,10 +249,13 @@ namespace PodcastDownloadManager.Podcast
 
             Logger.Log.Info($"Finish download the new file of {Name}.");
 
-            XmlDocument xmlDoc;
+            // The download replaced the cached file, so do not reuse a previously parsed document.
+            _feed = null;
+
+            ParsedFeed feed;
             try
             {
-                xmlDoc = LoadFeed();
+                feed = LoadFeed();
             }
             catch (Exception e)
             {
@@ -243,36 +264,32 @@ namespace PodcastDownloadManager.Podcast
                 return result;
             }
 
-            XmlNode channel = GetChannel(xmlDoc);
-
-            if (channel == null)
+            if (!feed.HasChannel)
             {
                 result.Error = "The xml file does not have a 'channel' node.";
                 return result;
             }
 
-            var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
-            nsmgr.AddNamespace("itunes", ItunesNamespace);
+            string title = feed.Title ?? Name;
 
-            string title = GetChildText(channel, "title") ?? Name;
-
-            foreach (XmlNode item in GetReleaseNodes(channel))
+            foreach (ParsedItem item in feed.Items)
             {
-                if (!TryParseUtc(GetChildText(item, "pubDate"), out DateTime dt))
+                if (!item.PublishedUtc.HasValue)
                 {
                     Logger.Log.Warn($"{Name}: an item without a readable pubDate was skipped.");
                     continue;
                 }
+
+                DateTime dt = item.PublishedUtc.Value;
 
                 if (dt <= lastUpdateUtc)
                 {
                     continue;
                 }
 
-                string newlyReleaseTitle = (GetChildText(item, "title") ?? string.Empty).Trim();
-                string newlyReleaseDownloadUrl = GetAttribute(item, "enclosure", "url");
+                string newlyReleaseTitle = (item.Title ?? string.Empty).Trim();
 
-                if (string.IsNullOrEmpty(newlyReleaseDownloadUrl))
+                if (string.IsNullOrEmpty(item.EnclosureUrl))
                 {
                     Logger.Log.Warn($"{Name}: \"{newlyReleaseTitle}\" has no enclosure url, skipped.");
                     continue;
@@ -283,13 +300,13 @@ namespace PodcastDownloadManager.Podcast
                     PodcastName = Name,
                     PodcastTitle = title,
                     Title = newlyReleaseTitle,
-                    DownloadUrl = newlyReleaseDownloadUrl,
-                    FileName = BuildFileName(title, dt, newlyReleaseTitle, newlyReleaseDownloadUrl),
-                    Author = GetChildText(item, "author")
-                             ?? GetChildText(item, "itunes:author", nsmgr)
+                    DownloadUrl = item.EnclosureUrl,
+                    FileName = BuildFileName(title, dt, newlyReleaseTitle, item.EnclosureUrl),
+                    Author = item.Author
+                             ?? item.ItunesAuthor
                              ?? title,
-                    ImageUrl = GetAttribute(item, "itunes:image", "href", nsmgr) ?? "null",
-                    Description = RemoveStripHtml(GetChildText(item, "description") ?? "null"),
+                    ImageUrl = item.ImageUrl ?? "null",
+                    Description = RemoveStripHtml(item.Description ?? "null"),
                     PublishedUtc = dt,
                 });
 
@@ -303,31 +320,30 @@ namespace PodcastDownloadManager.Podcast
         public void BuildPodcastDownloadFile(DateTime dateTime, string downloadDirectory, bool isSimpleFile,
             string downloadProgram, ref FileStream fs)
         {
-            XmlDocument xmlDoc = LoadFeed();
+            ParsedFeed feed = LoadFeed();
 
-            var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
-            nsmgr.AddNamespace("itunes", ItunesNamespace);
+            EnsureChannel(feed);
 
-            XmlNode channel = GetChannel(xmlDoc);
-            string title = GetChildText(channel, "title") ?? Name;
+            string title = feed.Title ?? Name;
 
-            foreach (XmlNode item in GetReleaseNodes(channel))
+            foreach (ParsedItem item in feed.Items)
             {
-                if (!TryParseUtc(GetChildText(item, "pubDate"), out DateTime dt))
+                if (!item.PublishedUtc.HasValue)
                 {
                     Logger.Log.Warn($"{Name}: an item without a readable pubDate was skipped.");
                     continue;
                 }
+
+                DateTime dt = item.PublishedUtc.Value;
 
                 if (dt <= dateTime)
                 {
                     continue;
                 }
 
-                string newlyReleaseTitle = (GetChildText(item, "title") ?? string.Empty).Trim();
-                string newlyReleaseDownloadUrl = GetAttribute(item, "enclosure", "url");
+                string newlyReleaseTitle = (item.Title ?? string.Empty).Trim();
 
-                if (string.IsNullOrEmpty(newlyReleaseDownloadUrl))
+                if (string.IsNullOrEmpty(item.EnclosureUrl))
                 {
                     continue;
                 }
@@ -336,26 +352,26 @@ namespace PodcastDownloadManager.Podcast
 
                 if (isSimpleFile)
                 {
-                    FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
+                    FileTools.AddText(fs, $"{item.EnclosureUrl}\n");
                     continue;
                 }
 
-                string fileName = BuildFileName(title, dt, newlyReleaseTitle, newlyReleaseDownloadUrl);
+                string fileName = BuildFileName(title, dt, newlyReleaseTitle, item.EnclosureUrl);
 
-                AppendDownloadEntry(fs, downloadProgram, downloadDirectory, newlyReleaseDownloadUrl, fileName);
+                AppendDownloadEntry(fs, downloadProgram, downloadDirectory, item.EnclosureUrl, fileName);
 
                 WriteMetadata(downloadDirectory, new NewlyRelease
                 {
                     PodcastName = Name,
                     PodcastTitle = title,
                     Title = newlyReleaseTitle,
-                    DownloadUrl = newlyReleaseDownloadUrl,
+                    DownloadUrl = item.EnclosureUrl,
                     FileName = fileName,
-                    Author = GetChildText(item, "author")
-                             ?? GetChildText(item, "itunes:author", nsmgr)
+                    Author = item.Author
+                             ?? item.ItunesAuthor
                              ?? "None",
-                    ImageUrl = GetAttribute(item, "itunes:image", "href", nsmgr) ?? "null",
-                    Description = RemoveStripHtml(GetChildText(item, "description") ?? "null"),
+                    ImageUrl = item.ImageUrl ?? "null",
+                    Description = RemoveStripHtml(item.Description ?? "null"),
                     PublishedUtc = dt,
                 });
             }
@@ -363,35 +379,35 @@ namespace PodcastDownloadManager.Podcast
 
         public void GetPodcastAllReleaseDetail(ref IOutput output)
         {
-            XmlDocument xmlDoc = LoadFeed();
-            XmlNode channel = GetChannel(xmlDoc);
+            ParsedFeed feed = LoadFeed();
 
-            foreach (XmlNode item in GetReleaseNodes(channel))
+            EnsureChannel(feed);
+
+            foreach (ParsedItem item in feed.Items)
             {
-                string newlyReleaseTitle = (GetChildText(item, "title") ?? string.Empty).Trim();
+                string newlyReleaseTitle = (item.Title ?? string.Empty).Trim();
 
-                string newlyReleasePubDate = TryParseUtc(GetChildText(item, "pubDate"), out DateTime dt)
-                    ? dt.ToString("G")
+                string newlyReleasePubDate = item.PublishedUtc.HasValue
+                    ? item.PublishedUtc.Value.ToString("G")
                     : "unknown";
 
                 output.WriteLine($"* {newlyReleaseTitle} - {newlyReleasePubDate}");
             }
         }
 
-        public void DownloadSelectIndexRelease(int[] selectIndex, string downloadDirectory, bool isSimpleFile,
+        public int DownloadSelectIndexRelease(int[] selectIndex, string downloadDirectory, bool isSimpleFile,
             string downloadProgram, ref FileStream fs)
         {
-            XmlDocument xmlDoc = LoadFeed();
+            ParsedFeed feed = LoadFeed();
 
-            var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
-            nsmgr.AddNamespace("itunes", ItunesNamespace);
+            EnsureChannel(feed);
 
-            XmlNode channel = GetChannel(xmlDoc);
-            string title = GetChildText(channel, "title") ?? Name;
+            string title = feed.Title ?? Name;
 
             int index = 0;
+            int writtenCount = 0;
 
-            foreach (XmlNode item in GetReleaseNodes(channel))
+            foreach (ParsedItem item in feed.Items)
             {
                 index++;
 
@@ -400,16 +416,16 @@ namespace PodcastDownloadManager.Podcast
                     continue;
                 }
 
-                if (!TryParseUtc(GetChildText(item, "pubDate"), out DateTime dt))
+                if (!item.PublishedUtc.HasValue)
                 {
                     Logger.Log.Warn($"{Name}: release {index} has no readable pubDate, skipped.");
                     continue;
                 }
 
-                string newlyReleaseTitle = (GetChildText(item, "title") ?? string.Empty).Trim();
-                string newlyReleaseDownloadUrl = GetAttribute(item, "enclosure", "url");
+                DateTime dt = item.PublishedUtc.Value;
+                string newlyReleaseTitle = (item.Title ?? string.Empty).Trim();
 
-                if (string.IsNullOrEmpty(newlyReleaseDownloadUrl))
+                if (string.IsNullOrEmpty(item.EnclosureUrl))
                 {
                     Logger.Log.Warn($"{Name}: release {index} has no enclosure url, skipped.");
                     continue;
@@ -419,29 +435,33 @@ namespace PodcastDownloadManager.Podcast
 
                 if (isSimpleFile)
                 {
-                    FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
+                    FileTools.AddText(fs, $"{item.EnclosureUrl}\n");
+                    writtenCount++;
                     continue;
                 }
 
-                string fileName = BuildFileName(title, dt, newlyReleaseTitle, newlyReleaseDownloadUrl);
+                string fileName = BuildFileName(title, dt, newlyReleaseTitle, item.EnclosureUrl);
 
-                AppendDownloadEntry(fs, downloadProgram, downloadDirectory, newlyReleaseDownloadUrl, fileName);
+                AppendDownloadEntry(fs, downloadProgram, downloadDirectory, item.EnclosureUrl, fileName);
+                writtenCount++;
 
                 WriteMetadata(downloadDirectory, new NewlyRelease
                 {
                     PodcastName = Name,
                     PodcastTitle = title,
                     Title = newlyReleaseTitle,
-                    DownloadUrl = newlyReleaseDownloadUrl,
+                    DownloadUrl = item.EnclosureUrl,
                     FileName = fileName,
-                    Author = GetChildText(item, "author")
-                             ?? GetChildText(item, "itunes:author", nsmgr)
+                    Author = item.Author
+                             ?? item.ItunesAuthor
                              ?? "None",
-                    ImageUrl = GetAttribute(item, "itunes:image", "href", nsmgr) ?? "null",
-                    Description = RemoveStripHtml(GetChildText(item, "description") ?? "null"),
+                    ImageUrl = item.ImageUrl ?? "null",
+                    Description = RemoveStripHtml(item.Description ?? "null"),
                     PublishedUtc = dt,
                 });
             }
+
+            return writtenCount;
         }
 
         /// <summary>
@@ -494,54 +514,112 @@ namespace PodcastDownloadManager.Podcast
             return downloadUrl.Contains(".m4a", StringComparison.OrdinalIgnoreCase) ? ".m4a" : ".mp3";
         }
 
-        private XmlDocument LoadFeed()
+        /// <summary>
+        /// A feed without a channel is not a usable podcast feed; fail instead of reporting an empty
+        /// success.
+        /// </summary>
+        private static void EnsureChannel(ParsedFeed feed)
         {
-            var xmlDoc = new XmlDocument { XmlResolver = null };
-
-            using var reader = XmlReader.Create(_fileName, FeedReaderSettings);
-            xmlDoc.Load(reader);
-
-            return xmlDoc;
-        }
-
-        private static XmlNode GetChannel(XmlDocument xmlDoc)
-        {
-            return xmlDoc?.DocumentElement?.SelectSingleNode("channel");
+            if (!feed.HasChannel)
+            {
+                throw new InvalidDataException("The xml file does not have a 'channel' node.");
+            }
         }
 
         /// <summary>
-        /// The 'item' children of a channel, in feed order.
+        /// Reads the cached feed once and keeps the fields the program uses. The XML is streamed
+        /// element by element, so items that are never needed do not stay in memory as a DOM.
         /// </summary>
-        private static IEnumerable<XmlNode> GetReleaseNodes(XmlNode channel)
+        private ParsedFeed LoadFeed()
         {
-            IEnumerable<XmlNode> items = channel?.ChildNodes.Cast<XmlNode>().Where(node => node.Name == "item");
-
-            return items ?? Enumerable.Empty<XmlNode>();
+            return _feed ?? (_feed = ParseFeed());
         }
 
-        private static string GetChildText(XmlNode parent, string name, XmlNamespaceManager nsmgr = null)
+        private ParsedFeed ParseFeed()
         {
-            if (parent == null)
+            var feed = new ParsedFeed();
+
+            using var reader = XmlReader.Create(_fileName, FeedReaderSettings);
+
+            bool inChannel = false;
+
+            while (reader.Read())
             {
-                return null;
+                if (reader.NodeType == XmlNodeType.EndElement)
+                {
+                    if (inChannel && reader.Depth == 1 && reader.NamespaceURI.Length == 0
+                        && reader.LocalName == "channel")
+                    {
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if (reader.NodeType != XmlNodeType.Element)
+                {
+                    continue;
+                }
+
+                if (!inChannel)
+                {
+                    if (reader.Depth == 1 && reader.NamespaceURI.Length == 0 && reader.LocalName == "channel")
+                    {
+                        inChannel = true;
+                        feed.HasChannel = true;
+                    }
+
+                    continue;
+                }
+
+                if (reader.Depth != 2 || reader.NamespaceURI.Length != 0)
+                {
+                    continue;
+                }
+
+                switch (reader.LocalName)
+                {
+                    case "title":
+                        feed.Title = ReadElement(reader).Value;
+                        break;
+                    case "description":
+                        feed.Description = ReadElement(reader).Value;
+                        break;
+                    case "item":
+                        feed.Items.Add(ToParsedItem(ReadElement(reader)));
+                        break;
+                }
             }
 
-            XmlNode node = nsmgr == null ? parent.SelectSingleNode(name) : parent.SelectSingleNode(name, nsmgr);
-
-            return node?.InnerText;
+            return feed;
         }
 
-        private static string GetAttribute(XmlNode parent, string element, string attribute,
-            XmlNamespaceManager nsmgr = null)
+        private static XElement ReadElement(XmlReader reader)
         {
-            if (parent == null)
+            using XmlReader subtree = reader.ReadSubtree();
+
+            return XElement.Load(subtree);
+        }
+
+        private static ParsedItem ToParsedItem(XElement item)
+        {
+            DateTime? publishedUtc = null;
+
+            if (TryParseUtc((string)item.Element("pubDate"), out DateTime dt))
             {
-                return null;
+                publishedUtc = dt;
             }
 
-            XmlNode node = nsmgr == null ? parent.SelectSingleNode(element) : parent.SelectSingleNode(element, nsmgr);
-
-            return node?.Attributes?[attribute]?.Value;
+            return new ParsedItem
+            {
+                Title = (string)item.Element("title"),
+                Description = (string)item.Element("description"),
+                Author = (string)item.Element("author"),
+                ItunesAuthor = (string)item.Element(Itunes + "author"),
+                ImageUrl = (string)item.Element(Itunes + "image")?.Attribute("href"),
+                EnclosureUrl = (string)item.Element("enclosure")?.Attribute("url"),
+                PublishedUtc = publishedUtc,
+            };
         }
 
         private static bool TryParseUtc(string value, out DateTime utc)
@@ -588,6 +666,34 @@ namespace PodcastDownloadManager.Podcast
             catch (UnauthorizedAccessException)
             {
             }
+        }
+
+        private sealed class ParsedFeed
+        {
+            public bool HasChannel;
+
+            public string Title;
+
+            public string Description;
+
+            public readonly List<ParsedItem> Items = new List<ParsedItem>();
+        }
+
+        private sealed class ParsedItem
+        {
+            public string Title;
+
+            public string Description;
+
+            public string Author;
+
+            public string ItunesAuthor;
+
+            public string ImageUrl;
+
+            public string EnclosureUrl;
+
+            public DateTime? PublishedUtc;
         }
     }
 }

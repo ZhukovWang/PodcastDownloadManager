@@ -30,11 +30,12 @@ namespace PodcastDownloadManager.Commands
 
             Logger.Log.Info($"Get the Show command input string, is {podcastName}. Refresh is {refresh}.");
 
-            string detail = Opml.ShowPodcastDetail(podcastName, refresh);
+            string detail = Opml.ShowPodcastDetail(podcastName, refresh, out bool success);
 
             Logger.Log.Info("Show the podcast detail results.");
             output.WriteLine(detail);
-            return 0;
+
+            return success ? ExitCode.Success : ExitCode.Failure;
         }
     }
 }

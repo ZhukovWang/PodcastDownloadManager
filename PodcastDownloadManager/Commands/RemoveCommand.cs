@@ -1,4 +1,4 @@
-﻿using NFlags;
+using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.Podcast;
 using System.IO;
@@ -41,14 +41,16 @@ namespace PodcastDownloadManager.Commands
                 {
                     Logger.Log.Warn($"There is not podcast named {podcastName}.");
                     output.WriteLine($"There is not podcast named {podcastName}.");
+                    return ExitCode.Failure;
                 }
             }
             else
             {
                 Logger.Log.Warn("There is not a opml file.");
                 output.WriteLine("There is not a profile. Please at least add one podcast.");
+                return ExitCode.Failure;
             }
-            return 0;
+            return ExitCode.Success;
         }
     }
 }

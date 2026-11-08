@@ -226,6 +226,27 @@ namespace PodcastDownloadManager.Tests
         }
 
         [Fact]
+        public void Reads_the_channel_title_without_confusing_it_with_item_titles()
+        {
+            string published = DateTime.UtcNow.AddDays(-1).ToString("R");
+            string cachedFeed =
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?><rss version=\"2.0\"><channel>" +
+                "<item><title>Episode</title>" +
+                $"<pubDate>{published}</pubDate>" +
+                "<enclosure url=\"http://example.test/1.mp3\" /></item>" +
+                "<title>Show</title><description>About the show</description>" +
+                "</channel></rss>";
+
+            PodcastType podcast = Cached("Show", "feed.xml", cachedFeed, TimeSpan.FromDays(1));
+
+            string detail = podcast.GetPodcastDetail();
+
+            Assert.Contains("Title: Show", detail);
+            Assert.Contains("Title: Episode", detail);
+            Assert.Contains("Description: About the show", detail);
+        }
+
+        [Fact]
         public void Builds_the_download_file_from_the_cached_feed()
         {
             string cachedFeed = FeedXml.Rss("Show",

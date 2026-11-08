@@ -151,7 +151,10 @@ namespace PodcastDownloadManager.Tests
             var cold = new RecordingOutput();
             IOutput coldRef = AsOutput(cold);
 
-            Assert.Equal(0, Opml.UpdateAllPodcasts(ref coldRef));
+            int coldCount = Opml.UpdateAllPodcasts(ref coldRef, out int coldFailures);
+
+            Assert.Equal(0, coldCount);
+            Assert.Equal(0, coldFailures);
 
             WriteCache(first, FeedXml.Rss("Show A", Item("a1", DateTime.UtcNow.AddDays(-1), "http://example.test/a1.mp3")),
                 TimeSpan.FromDays(7));
@@ -161,9 +164,10 @@ namespace PodcastDownloadManager.Tests
             var warm = new RecordingOutput();
             IOutput warmRef = AsOutput(warm);
 
-            int count = Opml.UpdateAllPodcasts(ref warmRef);
+            int count = Opml.UpdateAllPodcasts(ref warmRef, out int warmFailures);
 
             Assert.Equal(2, count);
+            Assert.Equal(0, warmFailures);
             Assert.True(warm.Contains("ShowA"));
             Assert.True(warm.Contains("ShowB"));
 
@@ -188,9 +192,10 @@ namespace PodcastDownloadManager.Tests
             var output = new RecordingOutput();
             IOutput outputRef = AsOutput(output);
 
-            int count = Opml.UpdateAllPodcasts(ref outputRef);
+            int count = Opml.UpdateAllPodcasts(ref outputRef, out int failedCount);
 
             Assert.Equal(1, count);
+            Assert.Equal(1, failedCount);
             Assert.True(output.Contains("Failed to update Bad"));
             Assert.True(output.Contains("Good"));
         }
@@ -201,7 +206,10 @@ namespace PodcastDownloadManager.Tests
             var output = new RecordingOutput();
             IOutput outputRef = AsOutput(output);
 
-            Assert.Equal(0, Opml.UpdateAllPodcasts(ref outputRef));
+            int count = Opml.UpdateAllPodcasts(ref outputRef, out int failedCount);
+
+            Assert.Equal(0, count);
+            Assert.Equal(0, failedCount);
             Assert.True(output.Contains("library is empty"));
         }
 
@@ -215,12 +223,13 @@ namespace PodcastDownloadManager.Tests
 
             int afterAdd = _server.Hits("alpha.xml");
 
-            string detail = Opml.ShowPodcastDetail(name);
+            string detail = Opml.ShowPodcastDetail(name, false, out bool found);
 
+            Assert.True(found);
             Assert.Equal(afterAdd, _server.Hits("alpha.xml"));
             Assert.Contains("Title: Show", detail);
 
-            Opml.ShowPodcastDetail(name, true);
+            Opml.ShowPodcastDetail(name, true, out _);
 
             Assert.Equal(afterAdd + 1, _server.Hits("alpha.xml"));
         }
@@ -230,7 +239,10 @@ namespace PodcastDownloadManager.Tests
         {
             WriteOpml();
 
-            Assert.Contains("Error", Opml.ShowPodcastDetail("missing"));
+            string detail = Opml.ShowPodcastDetail("missing", false, out bool found);
+
+            Assert.False(found);
+            Assert.Contains("Error", detail);
         }
 
         [Fact]
@@ -255,6 +267,76 @@ namespace PodcastDownloadManager.Tests
         }
 
         [Fact]
+        public void Download_after_date_fetches_missing_feeds_and_builds_the_list()
+        {
+            FeedItem item = Item("episode", DateTime.UtcNow.AddDays(-1), "http://example.test/one.mp3");
+            AddFeed("alpha.xml", "Show", item);
+
+            var output = new RecordingOutput();
+            IOutput outputRef = AsOutput(output);
+
+            int failed = Opml.DownloadPodcastAfterDate(DateTime.UtcNow.AddDays(-7),
+                _workspace.DownloadDirectory, false, DownloadTools.Aria2Name, ref outputRef);
+
+            Assert.Equal(0, failed);
+            Assert.Equal(2, _server.Hits("alpha.xml"));
+
+            string list = File.ReadAllText(Path.Combine(_workspace.DownloadDirectory, "PodcastDownload.txt"));
+
+            Assert.Contains("http://example.test/one.mp3", list);
+            Assert.Contains($"\tdir={_workspace.DownloadDirectory}", list);
+        }
+
+        [Fact]
+        public void Download_after_date_skips_a_failed_feed_and_still_builds_the_list()
+        {
+            WriteOpml("Good", _server.Url("good.xml"), "Bad", _server.Url("bad.xml"));
+
+            _server.Serve("good.xml", FeedXml.Rss("Good",
+                Item("episode", DateTime.UtcNow.AddDays(-1), "http://example.test/good.mp3")));
+            _server.FailWith("bad.xml", 404);
+
+            var output = new RecordingOutput();
+            IOutput outputRef = AsOutput(output);
+
+            int failed = Opml.DownloadPodcastAfterDate(DateTime.UtcNow.AddDays(-7),
+                _workspace.DownloadDirectory, false, DownloadTools.Aria2Name, ref outputRef);
+
+            Assert.Equal(1, failed);
+
+            string list = File.ReadAllText(Path.Combine(_workspace.DownloadDirectory, "PodcastDownload.txt"));
+
+            Assert.Contains("http://example.test/good.mp3", list);
+            Assert.DoesNotContain("bad.xml", list);
+            Assert.True(output.Contains("Failed to download Bad"));
+        }
+
+        [Fact]
+        public void Download_after_date_reports_a_feed_that_cannot_be_parsed()
+        {
+            WriteOpml("Good", _server.Url("good.xml"), "Broken", _server.Url("broken.xml"));
+
+            string goodFeed = FeedXml.Rss("Good",
+                Item("episode", DateTime.UtcNow.AddDays(-1), "http://example.test/good.mp3"));
+
+            WriteCache("Good", goodFeed, TimeSpan.FromHours(1));
+            File.WriteAllText(PodcastType.GetCachePath("Broken"), "not xml");
+
+            var output = new RecordingOutput();
+            IOutput outputRef = AsOutput(output);
+
+            int failed = Opml.DownloadPodcastAfterDate(DateTime.UtcNow.AddDays(-7),
+                _workspace.DownloadDirectory, false, DownloadTools.Aria2Name, ref outputRef);
+
+            Assert.Equal(1, failed);
+
+            string list = File.ReadAllText(Path.Combine(_workspace.DownloadDirectory, "PodcastDownload.txt"));
+
+            Assert.Contains("http://example.test/good.mp3", list);
+            Assert.True(output.Contains("Broken"));
+        }
+
+        [Fact]
         public void Download_select_reports_an_unknown_name()
         {
             WriteOpml();
@@ -264,12 +346,73 @@ namespace PodcastDownloadManager.Tests
         }
 
         [Fact]
+        public void Show_reports_a_failed_refresh_even_when_a_cache_exists()
+        {
+            FeedItem item = Item("episode", DateTime.UtcNow.AddDays(-1), "http://example.test/1.mp3");
+            string name = AddFeed("alpha.xml", "Show", item);
+
+            WriteCache(name, FeedXml.Rss("Show", item), TimeSpan.FromHours(1));
+            _server.FailWith("alpha.xml", 404);
+
+            string detail = Opml.ShowPodcastDetail(name, true, out bool success);
+
+            Assert.False(success);
+            Assert.Contains("could not be refreshed", detail);
+        }
+
+        [Fact]
+        public void Show_reports_a_feed_without_a_channel()
+        {
+            WriteOpml("NoChannel", _server.Url("empty.xml"));
+            WriteCache("NoChannel", "<rss></rss>", TimeSpan.FromHours(1));
+
+            string detail = Opml.ShowPodcastDetail("NoChannel", false, out bool success);
+
+            Assert.False(success);
+            Assert.Contains("channel", detail);
+        }
+
+        [Fact]
+        public void Download_after_date_skips_a_feed_without_a_channel()
+        {
+            WriteOpml("NoChannel", _server.Url("empty.xml"));
+            WriteCache("NoChannel", "<rss></rss>", TimeSpan.FromHours(1));
+
+            var output = new RecordingOutput();
+            IOutput outputRef = AsOutput(output);
+
+            int failed = Opml.DownloadPodcastAfterDate(DateTime.UtcNow.AddDays(-7),
+                _workspace.DownloadDirectory, true, DownloadTools.Aria2Name, ref outputRef);
+
+            Assert.Equal(1, failed);
+            Assert.Equal(string.Empty,
+                File.ReadAllText(Path.Combine(_workspace.DownloadDirectory, "PodcastDownload.txt")));
+            Assert.True(output.Contains("channel"));
+        }
+
+        [Fact]
+        public void Download_select_returns_an_error_when_no_index_matches()
+        {
+            FeedItem item = Item("episode", DateTime.UtcNow.AddDays(-1), "http://example.test/one.mp3");
+            string name = AddFeed("alpha.xml", "Show", item);
+
+            WriteCache(name, FeedXml.Rss("Show", item), TimeSpan.FromHours(1));
+
+            int result = Opml.DownloadPodcastSelectRelease(name, new[] { 99 },
+                _workspace.DownloadDirectory, false, DownloadTools.Aria2Name);
+
+            Assert.Equal(-3, result);
+            Assert.Equal(string.Empty,
+                File.ReadAllText(Path.Combine(_workspace.DownloadDirectory, "PodcastDownload.txt")));
+        }
+
+        [Fact]
         public void Download_select_returns_an_error_when_the_feed_is_missing()
         {
             WriteOpml("NoFeed", _server.Url("gone.xml"));
             _server.FailWith("gone.xml", 404);
 
-            Assert.Equal(-1, Opml.DownloadPodcastSelectRelease("NoFeed", new[] { 1 },
+            Assert.Equal(-2, Opml.DownloadPodcastSelectRelease("NoFeed", new[] { 1 },
                 _workspace.DownloadDirectory, false, DownloadTools.Aria2Name));
         }
     }

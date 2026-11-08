@@ -1,20 +1,33 @@
-﻿using NFlags;
+using NFlags;
+using System;
 using System.IO;
 
 namespace PodcastDownloadManager
 {
     internal class Program
     {
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
-            ProgramLoaded();
-            Logger.Log.Info("Program load finish.");
+            try
+            {
+                ProgramLoaded();
+                Logger.Log.Info("Program load finish.");
 
-            Cli.Configure(ConfigureNFlags)
-                .Root(RootCommand.Configure)
-                .Run(args);
+                int exitCode = Cli.Configure(ConfigureNFlags)
+                    .Root(RootCommand.Configure)
+                    .Run(args);
 
-            Logger.Log.Info("Program exit.");
+                Logger.Log.Info($"Program exit with code {exitCode}.");
+
+                return exitCode;
+            }
+            catch (Exception e)
+            {
+                Logger.Log.Error($"Program terminated unexpectedly. Exception is {e}");
+                Console.Error.WriteLine($"pdlm failed: {e.Message}");
+
+                return ExitCode.Failure;
+            }
         }
 
         private static void ConfigureNFlags(CliConfigurator configurator)
