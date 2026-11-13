@@ -57,7 +57,7 @@ namespace PodcastDownloadManager.Commands
             {
                 Logger.Log.Warn("The input name is NOT in the library.");
 
-                output.WriteLine("Error. Input of Name does not contain in the library.");
+                output.WriteError("Error. Input of Name does not contain in the library.");
                 return ExitCode.Failure;
             }
 
@@ -65,7 +65,7 @@ namespace PodcastDownloadManager.Commands
             {
                 Logger.Log.Warn("The feed of the podcast could not be read.");
 
-                output.WriteLine("Error. The feed of this podcast is not available or could not be read. Run 'pdlm update' first.");
+                output.WriteError("Error. The feed of this podcast is not available or could not be read. Run 'pdlm update' first.");
                 return ExitCode.Failure;
             }
 
@@ -73,7 +73,7 @@ namespace PodcastDownloadManager.Commands
             {
                 Logger.Log.Warn("None of the selected releases could be downloaded.");
 
-                output.WriteLine("Error. None of the selected indexes matched a downloadable release.");
+                output.WriteError("Error. None of the selected indexes matched a downloadable release.");
                 return ExitCode.Failure;
             }
 
@@ -81,7 +81,7 @@ namespace PodcastDownloadManager.Commands
             {
                 Logger.Log.Warn($"Could not build the download list. Result is {res}.");
 
-                output.WriteLine("Error. Could not build the download list.");
+                output.WriteError("Error. Could not build the download list.");
                 return ExitCode.Failure;
             }
 
@@ -99,7 +99,7 @@ namespace PodcastDownloadManager.Commands
             if (downloadExitCode != ExitCode.Success)
             {
                 Logger.Log.Warn($"The downloader exited with code {downloadExitCode}.");
-                output.WriteLine($"The downloader exited with code {downloadExitCode}.");
+                output.WriteError($"The downloader exited with code {downloadExitCode}.");
                 return ExitCode.Failure;
             }
 

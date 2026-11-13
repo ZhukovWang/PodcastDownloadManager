@@ -21,6 +21,7 @@ not to this code. Performance work here is about feed fetching and parsing.
 | `PodcastDownloadManager/Commands/` | one file per command; NFlags fluent config + `Execute` |
 | `PodcastDownloadManager/DownloadHelper.cs` | the only HTTP client: feed download, retry, atomic replace |
 | `PodcastDownloadManager/DownloadTools.cs` | starts aria2c / IDM and forwards their stdout to the console |
+| `PodcastDownloadManager/OutputTools.cs` | red user-facing errors on a real console; plain text for redirected/custom output |
 | `PodcastDownloadManager/Podcast/Podcast.cs` | feed parsing, new-release detection, download-list entries |
 | `PodcastDownloadManager/Podcast/Opml.cs` | the library file (`podcasts.opml`), library-wide operations |
 | `PodcastDownloadManager/FileMetadata/AudioMetadata.cs` | writes/consumes the `.metadata` sidecar, tags audio with TagLib# |
@@ -235,4 +236,6 @@ written, and (for `upgrade`) the pending list, which is only deleted when the do
 
 The codebase is older-style C# (block namespaces, explicit types, no nullable annotations) with a few
 newer files. Match the file you are editing. Log through `Logger.Log`, print user output through
-`IOutput`, and keep the existing message wording unless a test is updated with it.
+`IOutput`, and keep the existing message wording unless a test is updated with it. Print
+user-facing errors through `output.WriteError(...)` (`OutputTools`); it colors them red only on a
+real console, so redirected output and tests stay plain text.

@@ -61,9 +61,16 @@ namespace PodcastDownloadManager.Commands
             if (!File.Exists(ProgramConfiguration.PodcastNewlyReleaseInfo))
             {
                 Logger.Log.Info("Nothing upgrade.");
-                output.WriteLine(exitCode == ExitCode.Success
-                    ? "All up-to-date. Nothing download."
-                    : "Update failed. Nothing to download.");
+
+                if (exitCode == ExitCode.Success)
+                {
+                    output.WriteLine("All up-to-date. Nothing download.");
+                }
+                else
+                {
+                    output.WriteError("Update failed. Nothing to download.");
+                }
+
                 return exitCode;
             }
 
@@ -87,7 +94,7 @@ namespace PodcastDownloadManager.Commands
             if (downloadExitCode != ExitCode.Success)
             {
                 Logger.Log.Warn($"The downloader exited with code {downloadExitCode}; the download list is kept.");
-                output.WriteLine(
+                output.WriteError(
                     $"The downloader exited with code {downloadExitCode}. Keeping \"{ProgramConfiguration.PodcastNewlyReleaseInfo}\" for a retry.");
                 return ExitCode.Failure;
             }

@@ -28,7 +28,7 @@ namespace PodcastDownloadManager.Commands
 
             if (failedCount > 0)
             {
-                output.WriteLine($"Update finished with {failedCount} failed feed(s).");
+                output.WriteError($"Update finished with {failedCount} failed feed(s).");
             }
             else
             {

@@ -342,7 +342,7 @@ namespace PodcastDownloadManager.Podcast
 
                 if (!result.Success)
                 {
-                    output.WriteLine($"* Failed to update {result.PodcastName}: {result.Error}");
+                    output.WriteError($"* Failed to update {result.PodcastName}: {result.Error}");
                     failedCount++;
                     continue;
                 }
@@ -445,7 +445,7 @@ namespace PodcastDownloadManager.Podcast
 
                         if (!downloadFailures.Contains(podcast.Key))
                         {
-                            output.WriteLine($"* Skipping {podcast.Key}: the feed is not available.");
+                            output.WriteError($"* Skipping {podcast.Key}: the feed is not available.");
                         }
 
                         continue;
@@ -461,7 +461,7 @@ namespace PodcastDownloadManager.Podcast
                     {
                         failedCount++;
                         Logger.Log.Error($"Build the download list of {podcast.Key} failed. Exception is {e}");
-                        output.WriteLine($"* Failed to build the download list for {podcast.Key}: {e.Message}");
+                        output.WriteError($"* Failed to build the download list for {podcast.Key}: {e.Message}");
                     }
                 }
             }
@@ -529,7 +529,7 @@ namespace PodcastDownloadManager.Podcast
                 }
 
                 failures.Add(missing[i].Key);
-                output.WriteLine($"* Failed to download {missing[i].Key}: {errors[i]}");
+                output.WriteError($"* Failed to download {missing[i].Key}: {errors[i]}");
             }
 
             return failures;
@@ -541,7 +541,7 @@ namespace PodcastDownloadManager.Podcast
 
             if (!_podcastsDictionary.TryGetValue(name, out string url))
             {
-                output.WriteLine("Error. Input of Name does not contain in the library.");
+                output.WriteError("Error. Input of Name does not contain in the library.");
                 return -1;
             }
 
@@ -549,7 +549,7 @@ namespace PodcastDownloadManager.Podcast
 
             if (!podcast.FeedAvailable())
             {
-                output.WriteLine("Error. The feed of this podcast is not available. Run 'pdlm update' first.");
+                output.WriteError("Error. The feed of this podcast is not available. Run 'pdlm update' first.");
                 return -1;
             }
 
@@ -560,7 +560,7 @@ namespace PodcastDownloadManager.Podcast
             catch (Exception e)
             {
                 Logger.Log.Error($"List the releases of {name} failed. Exception is {e}");
-                output.WriteLine($"Error. The feed of {name} could not be read: {e.Message}");
+                output.WriteError($"Error. The feed of {name} could not be read: {e.Message}");
                 return -1;
             }
 

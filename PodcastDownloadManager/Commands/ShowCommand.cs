@@ -33,7 +33,15 @@ namespace PodcastDownloadManager.Commands
             string detail = Opml.ShowPodcastDetail(podcastName, refresh, out bool success);
 
             Logger.Log.Info("Show the podcast detail results.");
-            output.WriteLine(detail);
+
+            if (success)
+            {
+                output.WriteLine(detail);
+            }
+            else
+            {
+                output.WriteError(detail);
+            }
 
             return success ? ExitCode.Success : ExitCode.Failure;
         }

@@ -64,7 +64,7 @@ namespace PodcastDownloadManager.Commands
                 catch
                 {
                     Logger.Log.Info($"Directory \"{podcastsDownloadDirectory}\" is not valid.");
-                    output.WriteLine("Error. Input of 'dir' is illegal.");
+                    output.WriteError("Error. Input of 'dir' is illegal.");
                     return ExitCode.Failure;
                 }
             }
@@ -79,7 +79,7 @@ namespace PodcastDownloadManager.Commands
             {
                 Logger.Log.Warn($"Download date is not valid.");
 
-                output.WriteLine("Error. Input of 'date' is illegal.");
+                output.WriteError("Error. Input of 'date' is illegal.");
                 return ExitCode.Failure;
             }
 
@@ -113,7 +113,7 @@ namespace PodcastDownloadManager.Commands
                 if (downloadExitCode != ExitCode.Success)
                 {
                     Logger.Log.Warn($"The downloader exited with code {downloadExitCode}.");
-                    output.WriteLine($"The downloader exited with code {downloadExitCode}.");
+                    output.WriteError($"The downloader exited with code {downloadExitCode}.");
                     exitCode = ExitCode.Failure;
                 }
 

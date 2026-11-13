@@ -324,6 +324,9 @@ updated successfully. `download` still writes the list for the podcasts that wor
 `1` if any feed failed or the downloader exited non-zero. `download select` returns `1` when no
 selected index matches. `autometadata` returns `1` if any sidecar could not be applied.
 
+On an interactive console, user-facing errors are printed in red. When output is redirected the
+text is unchanged, so scripts and logs see no color escape codes.
+
 ## Configuration
 
 The configuration is a JSON file named `config.json` in the same directory as the executable. It is

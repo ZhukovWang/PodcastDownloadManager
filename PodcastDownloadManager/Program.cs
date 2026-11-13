@@ -36,7 +36,7 @@ namespace PodcastDownloadManager
             catch (Exception e)
             {
                 Logger.Log.Error($"Program terminated unexpectedly. Exception is {e}");
-                Console.Error.WriteLine($"pdlm failed: {e.Message}");
+                OutputTools.WriteConsoleError($"pdlm failed: {e.Message}");
 
                 return ExitCode.Failure;
             }

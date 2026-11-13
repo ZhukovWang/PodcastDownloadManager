@@ -143,7 +143,7 @@ namespace PodcastDownloadManager.Podcast
             catch (Exception e)
             {
                 DownloadFailed = true;
-                Console.WriteLine($"Download \"{_url}\" failed.");
+                Output.Console.WriteError($"Download \"{_url}\" failed.");
                 Logger.Log.Error($"Download failed. File path is {_fileName}. Exception is {e}");
                 return false;
             }

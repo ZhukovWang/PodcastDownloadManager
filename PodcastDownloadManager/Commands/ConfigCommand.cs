@@ -75,7 +75,7 @@ namespace PodcastDownloadManager.Commands
                 {
                     Logger.Log.Warn("DownloadPodcastPath is NOT valid.");
 
-                    output.WriteLine("Error. Input of 'download-path' does not exist.");
+                    output.WriteError("Error. Input of 'download-path' does not exist.");
                     isValid = false;
                 }
             }
@@ -90,7 +90,7 @@ namespace PodcastDownloadManager.Commands
                 {
                     Logger.Log.Warn("DownloadProgram is NOT valid.");
 
-                    output.WriteLine($"Error. Input of 'download-program' is illegal. Please input {DownloadTools.Aria2Name} or {DownloadTools.IdmName}.");
+                    output.WriteError($"Error. Input of 'download-program' is illegal. Please input {DownloadTools.Aria2Name} or {DownloadTools.IdmName}.");
                     isValid = false;
                 }
             }
@@ -114,7 +114,7 @@ namespace PodcastDownloadManager.Commands
                 {
                     Logger.Log.Warn("FeedTimeout is NOT valid.");
 
-                    output.WriteLine(
+                    output.WriteError(
                         $"Error. Input of 'feed-timeout' must be an integer from {DownloadConfiguration.MinFeedRequestTimeoutSeconds} to {DownloadConfiguration.MaxFeedRequestTimeoutSeconds}.");
                     isValid = false;
                 }
@@ -131,7 +131,7 @@ namespace PodcastDownloadManager.Commands
                 {
                     Logger.Log.Warn("FeedRetries is NOT valid.");
 
-                    output.WriteLine(
+                    output.WriteError(
                         $"Error. Input of 'feed-retries' must be an integer from {DownloadConfiguration.MinFeedDownloadMaxAttempts} to {DownloadConfiguration.MaxFeedDownloadMaxAttempts}.");
                     isValid = false;
                 }
@@ -140,7 +140,15 @@ namespace PodcastDownloadManager.Commands
             ProgramConfiguration.SaveConfig();
 
             Logger.Log.Info("Finish Config command.");
-            output.WriteLine(isValid ? "Done." : "Done with errors.");
+
+            if (isValid)
+            {
+                output.WriteLine("Done.");
+            }
+            else
+            {
+                output.WriteError("Done with errors.");
+            }
 
             return isValid ? ExitCode.Success : ExitCode.Failure;
         }
@@ -151,7 +159,7 @@ namespace PodcastDownloadManager.Commands
             {
                 Logger.Log.Warn("DownloadProgramPath is empty.");
 
-                output.WriteLine("Error. Input of 'download-program-path' is empty.");
+                output.WriteError("Error. Input of 'download-program-path' is empty.");
                 return false;
             }
 
@@ -169,7 +177,7 @@ namespace PodcastDownloadManager.Commands
 
             Logger.Log.Warn("DownloadProgramPath is NOT valid.");
 
-            output.WriteLine("Error. Input of 'download-program-path' does not exist.");
+            output.WriteError("Error. Input of 'download-program-path' does not exist.");
             return false;
         }
 

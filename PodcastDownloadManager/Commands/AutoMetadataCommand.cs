@@ -23,7 +23,14 @@ namespace PodcastDownloadManager.Commands
 
             Logger.Log.Info("Finish AutoMetadata.");
 
-            output.WriteLine(failures == 0 ? "Done." : $"Done with {failures} failure(s).");
+            if (failures == 0)
+            {
+                output.WriteLine("Done.");
+            }
+            else
+            {
+                output.WriteError($"Done with {failures} failure(s).");
+            }
 
             return failures == 0 ? ExitCode.Success : ExitCode.Failure;
         }

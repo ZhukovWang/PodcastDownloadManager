@@ -49,7 +49,7 @@ namespace PodcastDownloadManager.FileMetadata
             if (string.IsNullOrEmpty(downloadDirectory) || !Directory.Exists(downloadDirectory))
             {
                 Logger.Log.Error($"The download directory \"{downloadDirectory}\" does not exist.");
-                output.WriteLine($"Download directory \"{downloadDirectory}\" does not exist.");
+                output.WriteError($"Download directory \"{downloadDirectory}\" does not exist.");
                 return 1;
             }
 
@@ -73,7 +73,7 @@ namespace PodcastDownloadManager.FileMetadata
                     if (metadata.Length < 7)
                     {
                         Logger.Log.Error($"The metadata file \"{file}\" does not have 7 lines.");
-                        output.WriteLine($"\"{file}\" is not a valid metadata file.");
+                        output.WriteError($"\"{file}\" is not a valid metadata file.");
                         failures++;
                         continue;
                     }
@@ -91,7 +91,7 @@ namespace PodcastDownloadManager.FileMetadata
                     if (!System.IO.File.Exists(audioName))
                     {
                         Logger.Log.Error($"Audio file does not exist, and name is \"{audioName}\".");
-                        output.WriteLine($"\"{audioName}\" does NOT exist.");
+                        output.WriteError($"\"{audioName}\" does NOT exist.");
                         failures++;
                         continue;
                     }
@@ -133,7 +133,7 @@ namespace PodcastDownloadManager.FileMetadata
                         {
                             failures++;
                             Logger.Log.Error($"Image of \"{audioName}\" download failed. Exception is {e.Message}.");
-                            output.WriteLine($"Image of \"{audioName}\" download failed.");
+                            output.WriteError($"Image of \"{audioName}\" download failed.");
                         }
                     }
 
@@ -149,7 +149,7 @@ namespace PodcastDownloadManager.FileMetadata
                 {
                     failures++;
                     Logger.Log.Error($"Write metadata of \"{file}\" failed. Exception is {e}");
-                    output.WriteLine($"Failed to write metadata for \"{file}\": {e.Message}");
+                    output.WriteError($"Failed to write metadata for \"{file}\": {e.Message}");
                 }
             }
 
