@@ -40,11 +40,12 @@ namespace PodcastDownloadManager.Tests.Support
         }
 
         /// <summary>
-        /// Serves <paramref name="body"/> with 200, after an optional delay.
+        /// Serves <paramref name="body"/> with 200, after an optional delay before the headers and
+        /// another optional delay after the headers but before the body.
         /// </summary>
-        public void Serve(string path, string body, int delayMs = 0)
+        public void Serve(string path, string body, int delayMs = 0, int bodyDelayMs = 0)
         {
-            _routes[Normalize(path)] = new Route(body, delayMs, 0, 200);
+            _routes[Normalize(path)] = new Route(body, delayMs, bodyDelayMs, 0, 200);
         }
 
         /// <summary>
@@ -52,7 +53,7 @@ namespace PodcastDownloadManager.Tests.Support
         /// </summary>
         public void FailWith(string path, int statusCode)
         {
-            _routes[Normalize(path)] = new Route(null, 0, int.MaxValue, statusCode);
+            _routes[Normalize(path)] = new Route(null, 0, 0, int.MaxValue, statusCode);
         }
 
         /// <summary>
@@ -60,7 +61,7 @@ namespace PodcastDownloadManager.Tests.Support
         /// </summary>
         public void FailOnce(string path, int statusCode, string body = "")
         {
-            _routes[Normalize(path)] = new Route(body, 0, 1, statusCode);
+            _routes[Normalize(path)] = new Route(body, 0, 0, 1, statusCode);
         }
 
         public int Hits(string path)
@@ -124,6 +125,7 @@ namespace PodcastDownloadManager.Tests.Support
 
                     int status;
                     string body;
+                    int bodyDelayMs = 0;
 
                     if (!_routes.TryGetValue(path, out Route route))
                     {
@@ -144,6 +146,7 @@ namespace PodcastDownloadManager.Tests.Support
 
                         status = 200;
                         body = route.Body ?? string.Empty;
+                        bodyDelayMs = route.BodyDelayMs;
                     }
 
                     byte[] payload = Encoding.UTF8.GetBytes(body);
@@ -154,6 +157,14 @@ namespace PodcastDownloadManager.Tests.Support
                         "Connection: close\r\n\r\n");
 
                     await stream.WriteAsync(header, 0, header.Length, token);
+
+                    if (bodyDelayMs > 0)
+                    {
+                        // Let the client see the headers before stalling on the body.
+                        await stream.FlushAsync(token);
+                        await Task.Delay(bodyDelayMs, token);
+                    }
+
                     await stream.WriteAsync(payload, 0, payload.Length, token);
                     await stream.FlushAsync(token);
                 }
@@ -185,10 +196,11 @@ namespace PodcastDownloadManager.Tests.Support
 
             private int _hits;
 
-            public Route(string body, int delayMs, int failuresLeft, int failureStatus)
+            public Route(string body, int delayMs, int bodyDelayMs, int failuresLeft, int failureStatus)
             {
                 Body = body;
                 DelayMs = delayMs;
+                BodyDelayMs = bodyDelayMs;
                 _failuresLeft = failuresLeft;
                 FailureStatus = failureStatus;
             }
@@ -196,6 +208,8 @@ namespace PodcastDownloadManager.Tests.Support
             public string Body { get; }
 
             public int DelayMs { get; }
+
+            public int BodyDelayMs { get; }
 
             public int FailureStatus { get; }
 

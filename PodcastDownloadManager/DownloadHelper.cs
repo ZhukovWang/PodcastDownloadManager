@@ -143,8 +143,11 @@ public static class DownloadHelper
                                          || http.StatusCode == HttpStatusCode.RequestTimeout
                                          || http.StatusCode == HttpStatusCode.TooManyRequests
                                          || (int)http.StatusCode >= 500,
-            // HttpClient reports its own timeout as a cancellation.
-            TaskCanceledException => true,
+            // Any cancellation that did not come from the caller is a timeout. HttpClient reports
+            // it as TaskCanceledException today, but match the base type so another place in the
+            // pipeline (or a future runtime) surfacing a plain OperationCanceledException is still
+            // retried. Caller cancellation was already filtered out above.
+            OperationCanceledException => true,
             IOException => true,
             _ => false,
         };

@@ -144,5 +144,22 @@ namespace PodcastDownloadManager.Tests
             Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
                 $"The request took {stopwatch.Elapsed}, so the configured timeout was not used.");
         }
+
+        [Fact]
+        public async Task Retries_when_the_body_stalls_past_the_timeout()
+        {
+            ProgramConfiguration.DownloadConfigurations.FeedRequestTimeoutSeconds = 1;
+            ProgramConfiguration.DownloadConfigurations.FeedDownloadMaxAttempts = 2;
+
+            // The headers arrive immediately, but the body is delayed beyond the timeout. A
+            // timeout while copying the body must still be treated as a transient failure.
+            _server.Serve("slow-body.xml", "body", bodyDelayMs: 5000);
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => DownloadHelper.DownloadFileAsync(_server.Url("slow-body.xml"),
+                    Path.Combine(_workspace.Root, "f.xml"), TestContext.Current.CancellationToken));
+
+            Assert.Equal(2, _server.Hits("slow-body.xml"));
+        }
     }
 }

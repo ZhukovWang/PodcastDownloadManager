@@ -420,7 +420,7 @@ dotnet build
 dotnet run --project PodcastDownloadManager.Tests
 ```
 
-The suite contains 76 xunit v3 tests on
+The suite contains 77 xunit v3 tests on
 [Microsoft.Testing.Platform](https://learn.microsoft.com/dotnet/core/testing/unit-testing-platform-intro).
 The test project builds to an executable that runs its own tests, so running it directly is a
 complete test run and needs no test host. The tests never reach the network: feeds are served by a

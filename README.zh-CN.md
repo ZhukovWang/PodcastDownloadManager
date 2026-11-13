@@ -395,7 +395,7 @@ dotnet build
 dotnet run --project PodcastDownloadManager.Tests
 ```
 
-测试套件包含 76 个 xunit v3 测试，运行在
+测试套件包含 77 个 xunit v3 测试，运行在
 [Microsoft.Testing.Platform](https://learn.microsoft.com/dotnet/core/testing/unit-testing-platform-intro)
 上。测试项目会构建成可自行运行测试的可执行文件，因此
 `dotnet run --project PodcastDownloadManager.Tests` 就是一次完整测试，不需要测试宿主。测试不会

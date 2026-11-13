@@ -149,7 +149,7 @@ written, and (for `upgrade`) the pending list, which is only deleted when the do
 
 ## Testing
 
-- `PodcastDownloadManager.Tests` — 76 tests, no network: feeds are served by `Support/FakeFeedServer.cs`
+- `PodcastDownloadManager.Tests` — 77 tests, no network: feeds are served by `Support/FakeFeedServer.cs`
   (a `TcpListener` on loopback), and `Support/TestWorkspace.cs` points every `ProgramConfiguration` path
   at a fresh temp directory per test.
 - `ExitCodeTests` drives `Program.Main` end to end and asserts the process-level result; keep it in sync
@@ -208,7 +208,7 @@ written, and (for `upgrade`) the pending list, which is only deleted when the do
     it reproduces in any shell and via Task Scheduler; copying the built exe to a normal folder or
     pointing `TEMP` inside the repo makes the tests pass. Fix with
     `icacls <repo> /setintegritylevel (OI)(CI)Medium /T`, then rebuild; after that `dotnet test` reports
-    76/76 passing. A sandbox may also leave a `Everyone:(CI)(DENY)(S,DC)` ACE and an unresolvable
+    77/77 passing. A sandbox may also leave a `Everyone:(CI)(DENY)(S,DC)` ACE and an unresolvable
     `S-1-4-...` grant on the folder; those are harmless but can be removed with
     `icacls <repo> /remove:d Everyone /T` (the synthetic SID has to be removed through .NET).
 12. **`ConfigCommand` registers options without defaults on purpose.** `GetOption<string>` returns
