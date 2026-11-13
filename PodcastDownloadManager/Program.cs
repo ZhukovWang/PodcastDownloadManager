@@ -1,6 +1,8 @@
 using NFlags;
 using System;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 
 namespace PodcastDownloadManager
 {
@@ -10,6 +12,16 @@ namespace PodcastDownloadManager
         {
             try
             {
+                // NFlags would print the assembly version (1.0.0.0), which does not include the
+                // git description injected at build time. Handle the version request here so both
+                // the banner and '--version' show the same value.
+                if (IsVersionRequest(args))
+                {
+                    PrintVersion();
+                    return ExitCode.Success;
+                }
+
+                PrintVersion();
                 ProgramLoaded();
                 Logger.Log.Info("Program load finish.");
 
@@ -28,6 +40,31 @@ namespace PodcastDownloadManager
 
                 return ExitCode.Failure;
             }
+        }
+
+        private static void PrintVersion()
+        {
+            Console.WriteLine($"pdlm {GetVersion()}");
+        }
+
+        private static string GetVersion()
+        {
+            Assembly assembly = Assembly.GetExecutingAssembly();
+
+            AssemblyInformationalVersionAttribute informationalVersion =
+                assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+
+            if (!string.IsNullOrWhiteSpace(informationalVersion?.InformationalVersion))
+            {
+                return informationalVersion.InformationalVersion;
+            }
+
+            return assembly.GetName().Version?.ToString() ?? "unknown";
+        }
+
+        private static bool IsVersionRequest(string[] args)
+        {
+            return args.Any(argument => argument == "-v" || argument == "--version");
         }
 
         private static void ConfigureNFlags(CliConfigurator configurator)

@@ -140,7 +140,9 @@ feeds first, but running `update` explicitly keeps the two steps easy to inspect
 
 ## Commands
 
-Global options: `-h` / `--help`, `-v` / `--version`.
+Global options: `-h` / `--help`, `-v` / `--version`. Every command prints the build version
+first; `-v` / `--version` prints only the version line. The version is `git describe --tags
+--always --dirty`, injected at build time (it falls back to `1.0.0.0` outside a git checkout).
 
 | Command | Description |
 | --- | --- |

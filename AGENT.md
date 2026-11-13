@@ -38,7 +38,10 @@ dotnet run --project PodcastDownloadManager.Tests   # the whole test suite
 dotnet run --project PodcastDownloadManager -- list # run the CLI from source
 ```
 
-The app targets `net10.0`, `AssemblyName` is `pdlm`. Tests are xunit v3 on Microsoft.Testing.Platform:
+The app targets `net10.0`, `AssemblyName` is `pdlm`. Its displayed version is
+`git describe --tags --always --dirty`, injected as `AssemblyInformationalVersion` by the
+`GenerateGitVersion` target; `AssemblyVersion`/`FileVersion` stay `1.0.0.0` for compatibility. A
+non-git source tree falls back to `1.0.0.0`. Tests are xunit v3 on Microsoft.Testing.Platform:
 the test project is an executable that runs its own tests, so the command above is a complete test run.
 `global.json` selects the MTP runner for `dotnet test` where the platform permits the runner/test
 process handshake. On Windows that handshake fails outright if the checkout is `Low` integrity; see
