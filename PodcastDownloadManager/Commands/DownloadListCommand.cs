@@ -1,4 +1,4 @@
-﻿using NFlags;
+using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.Podcast;
 using System.Collections.Generic;
@@ -39,8 +39,9 @@ namespace PodcastDownloadManager.Commands
             else
             {
                 Logger.Log.Warn("The input name is NOT in the library.");
+                return ExitCode.Failure;
             }
-            return 0;
+            return ExitCode.Success;
         }
     }
 }

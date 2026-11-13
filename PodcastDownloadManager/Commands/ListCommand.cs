@@ -1,4 +1,4 @@
-﻿using NFlags;
+using NFlags;
 using NFlags.Commands;
 using PodcastDownloadManager.Podcast;
 
@@ -25,7 +25,7 @@ namespace PodcastDownloadManager.Commands
 
             Opml.ListPodcast(ref output);
 
-            return 0;
+            return ExitCode.Success;
         }
     }
 }

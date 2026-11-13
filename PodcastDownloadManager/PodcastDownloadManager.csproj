@@ -2,23 +2,54 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>pdlm</AssemblyName>
 	<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 	<LangVersion>default</LangVersion>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="NFlags" Version="1.8.0" />
     <PackageReference Include="NLog.Extensions.Logging" Version="1.6.4" />
-    <PackageReference Include="System.Text.Json" Version="4.7.2" />
     <PackageReference Include="TagLibSharp" Version="2.2.0" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <None Update="nlog.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
+  <!--
+    Inject the git description (tag, commit count and hash, plus -dirty) as the informational
+    version. AssemblyVersion/FileVersion stay stable in Properties/AssemblyInfo.cs; this value is
+    what the CLI prints. A source tree without git falls back to a fixed version.
+  -->
+  <Target Name="GenerateGitVersion" BeforeTargets="BeforeCompile;CoreCompile">
+    <Exec Command="git describe --tags --always --dirty"
+          Condition="Exists('$(MSBuildProjectDirectory)/../.git')"
+          ConsoleToMSBuild="true"
+          ContinueOnError="true"
+          IgnoreExitCode="true"
+          IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitDescribe" />
+      <Output TaskParameter="ExitCode" PropertyName="GitDescribeExitCode" />
+    </Exec>
+
+    <PropertyGroup>
+      <GitVersion Condition="'$(GitDescribeExitCode)' == '0' and '$(GitDescribe)' != ''">$([System.String]::Copy('$(GitDescribe)').Trim())</GitVersion>
+      <GitVersion Condition="'$(GitVersion)' == ''">1.0.0.0</GitVersion>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(IntermediateOutputPath)GitVersion.g.cs"
+                      Lines="[assembly: System.Reflection.AssemblyInformationalVersion(&quot;$(GitVersion)&quot;)]"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)GitVersion.g.cs" />
+      <FileWrites Include="$(IntermediateOutputPath)GitVersion.g.cs" />
+    </ItemGroup>
+  </Target>
 
 </Project>

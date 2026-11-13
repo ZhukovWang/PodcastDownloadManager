@@ -1,100 +1,215 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml;
+using System.Xml.Linq;
 using PodcastDownloadManager.FileMetadata;
 using NFlags;
 
 namespace PodcastDownloadManager.Podcast
 {
+    /// <summary>
+    /// One release that is newer than the last update of its feed.
+    /// </summary>
+    public sealed class NewlyRelease
+    {
+        public string PodcastName;
+
+        public string PodcastTitle;
+
+        public string Title;
+
+        public string DownloadUrl;
+
+        public string FileName;
+
+        public string Author;
+
+        public string ImageUrl;
+
+        public string Description;
+
+        public DateTime PublishedUtc;
+    }
+
+    /// <summary>
+    /// Outcome of refreshing one feed. Errors are carried in <see cref="Error"/> instead of being
+    /// thrown, so that one broken feed cannot abort an update of the whole library.
+    /// </summary>
+    public sealed class FeedUpdateResult
+    {
+        public string PodcastName;
+
+        public string Url;
+
+        public bool Success;
+
+        public string Error;
+
+        public readonly List<NewlyRelease> Releases = new List<NewlyRelease>();
+    }
+
     public class Podcast
     {
+        private static readonly XNamespace Itunes = "http://www.itunes.com/dtds/podcast-1.0.dtd";
+
+        private static readonly XmlReaderSettings FeedReaderSettings = new XmlReaderSettings
+        {
+            DtdProcessing = DtdProcessing.Prohibit,
+            XmlResolver = null,
+            IgnoreComments = true,
+            IgnoreProcessingInstructions = true,
+        };
+
         private readonly string _url;
 
         public readonly string Name;
 
         private readonly string _fileName;
 
+        /// <summary>
+        /// Feed fields extracted on first use and reused for the lifetime of this instance. The XML
+        /// is streamed and only the fields the program needs are kept, so a large feed does not stay
+        /// in memory as a DOM and is parsed at most once per command.
+        /// </summary>
+        private ParsedFeed _feed;
+
+        /// <summary>
+        /// True when the last attempted feed download failed. The cached copy may still be usable.
+        /// </summary>
+        public bool DownloadFailed { get; private set; }
+
+        /// <summary>
+        /// Reads the name of an unknown podcast from its feed. <see cref="Name"/> is null when the
+        /// feed could not be downloaded or parsed.
+        /// </summary>
         public Podcast(string url)
         {
-            this._url = url;
-            _fileName = $"{ProgramConfiguration.PodcastsFileDirectory}{Path.DirectorySeparatorChar}NewPodcast.xml";
-            Download(url);
-            this.Name = GetPodcastName();
-            File.Delete(_fileName);
+            _url = url;
+            _fileName = Path.Combine(ProgramConfiguration.PodcastsFileDirectory, "NewPodcast.xml");
+
+            Name = TryDownloadFeed() ? GetPodcastName() : null;
+
+            TryDeleteFile(_fileName);
         }
 
         public Podcast(string name, string url, bool skipDownload = false)
         {
-            this._url = url;
-            this.Name = name;
-            _fileName = $"{ProgramConfiguration.PodcastsFileDirectory}{Path.DirectorySeparatorChar}{name}.xml";
+            _url = url;
+            Name = name;
+            _fileName = GetCachePath(name);
+
             if (!skipDownload)
             {
-                Download(url);
+                TryDownloadFeed();
             }
         }
 
-        private void Download(string url)
+        /// <summary>
+        /// Where the feed of <paramref name="name"/> is cached.
+        /// </summary>
+        public static string GetCachePath(string name)
         {
-            if (File.Exists(_fileName))
-            {
-                File.Delete(_fileName);
-            }
+            return Path.Combine(ProgramConfiguration.PodcastsFileDirectory, $"{name}.xml");
+        }
 
-            Logger.Log.Info($"Start download podcast xml file. Url is {url}.");
+        /// <summary>
+        /// Whether a usable copy of the feed is already on disk.
+        /// </summary>
+        public static bool HasCache(string name)
+        {
+            return !string.IsNullOrEmpty(name) && File.Exists(GetCachePath(name));
+        }
+
+        /// <summary>
+        /// Whether the feed of this podcast is available locally.
+        /// </summary>
+        public bool FeedAvailable()
+        {
+            return File.Exists(_fileName);
+        }
+
+        private bool TryDownloadFeed()
+        {
+            Logger.Log.Info($"Start download podcast xml file. Url is {_url}.");
+
             try
             {
-                DownloadHelper.DownloadFileAsync(url, _fileName).Wait();
+                DownloadHelper.DownloadFileAsync(_url, _fileName).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Download {_fileName} failed.");
+                DownloadFailed = true;
+                Output.Console.WriteError($"Download \"{_url}\" failed.");
                 Logger.Log.Error($"Download failed. File path is {_fileName}. Exception is {e}");
-                return;
+                return false;
             }
+
             Logger.Log.Info($"Download finish. File path is {_fileName}.");
+
+            DownloadFailed = false;
+
+            // A new file invalidates anything parsed from the previous copy.
+            _feed = null;
+
+            return true;
         }
 
         private string GetPodcastName()
         {
-            XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(_fileName);
+            ParsedFeed feed;
+            try
+            {
+                feed = LoadFeed();
+            }
+            catch (Exception e)
+            {
+                Logger.Log.Error($"The feed of {_url} is not valid xml. Exception is {e}");
+                return null;
+            }
 
-            var root = xmlDoc.DocumentElement;
+            if (string.IsNullOrWhiteSpace(feed.Title))
+            {
+                Logger.Log.Error($"The feed of {_url} does not have a channel title.");
+                return null;
+            }
 
-            XmlNode channel = root.SelectSingleNode("channel");
-
-            XmlNode titleNode = channel.SelectSingleNode("title");
-
-            string name = titleNode.InnerText.Trim().Replace(" ", "");
-
-            return GetValidName(name);
+            return GetValidName(feed.Title.Trim().Replace(" ", ""));
         }
 
         public string GetPodcastDetail()
         {
-            XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(_fileName);
+            if (!FeedAvailable())
+            {
+                return "Error. The feed of this podcast is not available. Run 'pdlm update' first.";
+            }
 
-            var root = xmlDoc.DocumentElement;
+            ParsedFeed feed = LoadFeed();
 
-            XmlNode channel = root.SelectSingleNode("channel");
+            EnsureChannel(feed);
 
-            string title = channel.SelectSingleNode("title").InnerText;
+            string title = feed.Title ?? Name;
+            string description = RemoveStripHtml(feed.Description ?? string.Empty);
 
-            string description = RemoveStripHtml(channel.SelectSingleNode("description").InnerText);
+            ParsedItem newlyRelease = feed.Items.FirstOrDefault();
 
-            XmlNode newlyRelease = channel.SelectSingleNode("item");
+            if (newlyRelease == null)
+            {
+                return $"Title: {title}\n" +
+                       $"Description: {description}\n\n" +
+                       "Newly release: none";
+            }
 
-            string newlyReleaseTitle = newlyRelease.SelectSingleNode("title").InnerText;
-            string newlyReleaseDescription = RemoveStripHtml(newlyRelease.SelectSingleNode("description").InnerText);
-            string newlyReleasePubDate = newlyRelease.SelectSingleNode("pubDate").InnerText;
-            DateTime dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
-            newlyReleasePubDate = dt.ToString("G");
-            string newlyReleaseDownloadUrl = newlyRelease.SelectSingleNode("enclosure").Attributes["url"].Value;
+            string newlyReleaseTitle = newlyRelease.Title ?? string.Empty;
+            string newlyReleaseDescription = RemoveStripHtml(newlyRelease.Description ?? string.Empty);
+            string newlyReleaseDownloadUrl = newlyRelease.EnclosureUrl ?? "null";
+
+            string newlyReleasePubDate = newlyRelease.PublishedUtc.HasValue
+                ? newlyRelease.PublishedUtc.Value.ToString("G")
+                : "unknown";
 
             return $"Title: {title}\n" +
                    $"Description: {description}\n\n" +
@@ -105,354 +220,480 @@ namespace PodcastDownloadManager.Podcast
                    $"Download url: {newlyReleaseDownloadUrl}";
         }
 
-        public void GetPodcastNewlyRelease(ref IOutput output, ref int updateCount)
+        /// <summary>
+        /// Downloads the feed and collects every release published after the cached feed was written.
+        /// Contains no shared state, so it is safe to run for several podcasts in parallel.
+        /// </summary>
+        public FeedUpdateResult CollectNewlyReleases()
         {
-            //Download new xml
-            Logger.Log.Info($"Download the new file of {Name}.");
+            var result = new FeedUpdateResult { PodcastName = Name, Url = _url };
+
+            // Read the timestamp before downloading: a successful download replaces the cached file
+            // and resets its last write time to "now", which would forget the "new since last update"
+            // mark. Both sides of the comparison are UTC; mixing in local time silently shifts the
+            // window by the time zone offset.
+            DateTime lastUpdateUtc = FeedAvailable() ? File.GetLastWriteTimeUtc(_fileName) : DateTime.UtcNow;
+
+            Logger.Log.Info($"Download the new file of {Name}. Last update is {lastUpdateUtc:G} (UTC).");
 
             try
             {
-                DownloadHelper.DownloadFileAsync(this._url,  $"{_fileName}.tmp").Wait();
+                DownloadHelper.DownloadFileAsync(_url, _fileName).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Download {Name} failed.");
+                result.Error = e.Message;
                 Logger.Log.Error($"Download {Name} failed. Exception is {e}");
-                return;
+                return result;
             }
 
             Logger.Log.Info($"Finish download the new file of {Name}.");
 
-            //get last update time
-            DateTime lastUpdateDateTime = DateTime.Now;
-            if (File.Exists(_fileName))
+            // The download replaced the cached file, so do not reuse a previously parsed document.
+            _feed = null;
+
+            ParsedFeed feed;
+            try
             {
-                lastUpdateDateTime = File.GetLastWriteTimeUtc(_fileName);
-                File.Delete($"{_fileName}");
+                feed = LoadFeed();
             }
-            Logger.Log.Info($"Get the {Name} last update time is {lastUpdateDateTime.ToString("G")}.");
-
-            File.Copy($"{_fileName}.tmp", _fileName, true);
-            File.Delete($"{_fileName}.tmp");
-
-            XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(_fileName);
-
-            var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
-            nsmgr.AddNamespace("itunes", "http://www.itunes.com/dtds/podcast-1.0.dtd");
-
-            var root = xmlDoc.DocumentElement;
-
-            if (root == null)
+            catch (Exception e)
             {
-                output.WriteLine("The xml file don't have 'root'.");
-                return;
+                result.Error = $"The feed is not valid xml: {e.Message}";
+                Logger.Log.Error($"The feed of {Name} is not valid xml. Exception is {e}");
+                return result;
             }
 
-            XmlNode channel = root.SelectSingleNode("channel");
-
-            if (channel == null)
+            if (!feed.HasChannel)
             {
-                output.WriteLine("The xml file don't have 'channel'.");
-                return;
+                result.Error = "The xml file does not have a 'channel' node.";
+                return result;
             }
 
-            XmlNode titleNode = channel.SelectSingleNode("title");
+            string title = feed.Title ?? Name;
 
-            if (titleNode == null)
+            foreach (ParsedItem item in feed.Items)
             {
-                output.WriteLine("The xml file don't have 'title'.");
-                return;
-            }
-
-            string title = titleNode.InnerText;
-
-            XmlNodeList nodeList = channel.ChildNodes;
-
-            for (int i = 0; i < nodeList.Count; i++)
-            {
-                if (nodeList[i].Name == "item")
+                if (!item.PublishedUtc.HasValue)
                 {
-                    string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
-                    DateTime dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
-                    if (dt > lastUpdateDateTime)
-                    {
-                        string newlyReleaseTitle =
-                            nodeList[i].SelectSingleNode("title").InnerText.Trim();
-
-                        Logger.Log.Info($"Get the newly release title is {newlyReleaseTitle}, time is {dt.ToString("G")}.");
-
-                        newlyReleasePubDate = dt.ToString("yyyy-MM-dd", DateTimeFormatInfo.InvariantInfo);
-
-                        string showString = $"* {this.Name} - {newlyReleaseTitle} - {newlyReleasePubDate}";
-
-                        output.WriteLine(showString);
-                        updateCount++;
-
-                        newlyReleasePubDate = dt.ToString("yyyy_MM_dd", DateTimeFormatInfo.InvariantInfo);
-
-                        string newlyReleaseDownloadUrl =
-                            nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
-
-                        string fileExtension = ".mp3";
-                        if (newlyReleaseDownloadUrl.Contains(".m4a"))
-                        {
-                            fileExtension = ".m4a";
-                        }
-
-                        string fileName = GetValidName($"{title} - {newlyReleasePubDate} - {newlyReleaseTitle}{fileExtension}");
-
-                        FileStream fs = File.Open(ProgramConfiguration.PodcastNewlyReleaseInfo, FileMode.Append);
-
-                        if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.Aria2Name)
-                        {
-                            FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
-                            FileTools.AddText(fs, $"\tdir={ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath}\n");
-                            FileTools.AddText(fs, $"\tout={fileName}\n");
-                        }
-                        else if (ProgramConfiguration.DownloadConfigurations.DownloadProgram == DownloadTools.IdmName)
-                        {
-                            FileTools.AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath}\" /f \"{fileName}\"\n");
-                        }
-
-                        fs.Close();
-
-                        string author = title;
-                        if (nodeList[i].SelectSingleNode("author") != null)
-                        {
-                            author = nodeList[i].SelectSingleNode("author").InnerText;
-                        }
-                        else if (nodeList[i].SelectSingleNode("itunes:author", nsmgr) != null)
-                        {
-                            author = nodeList[i].SelectSingleNode("itunes:author", nsmgr).InnerText;
-                        }
-
-                        string imageUrl = "null";
-                        if (nodeList[i].SelectSingleNode("itunes:image", nsmgr) != null)
-                        {
-                            imageUrl = nodeList[i].SelectSingleNode("itunes:image", nsmgr).Attributes["href"].Value;
-                        }
-
-                        string description = "null";
-                        if (nodeList[i].SelectSingleNode("description") != null)
-                        {
-                            description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
-                        }
-
-                        string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + Path.DirectorySeparatorChar +
-                                                  fileName + ".metadata";
-                        AudioMetadata.CreateAudioMetadata(metadataFilePath, title, newlyReleaseTitle, author, imageUrl, description,
-                            dt);
-                    }
+                    Logger.Log.Warn($"{Name}: an item without a readable pubDate was skipped.");
+                    continue;
                 }
+
+                DateTime dt = item.PublishedUtc.Value;
+
+                if (dt <= lastUpdateUtc)
+                {
+                    continue;
+                }
+
+                string newlyReleaseTitle = (item.Title ?? string.Empty).Trim();
+
+                if (string.IsNullOrEmpty(item.EnclosureUrl))
+                {
+                    Logger.Log.Warn($"{Name}: \"{newlyReleaseTitle}\" has no enclosure url, skipped.");
+                    continue;
+                }
+
+                result.Releases.Add(new NewlyRelease
+                {
+                    PodcastName = Name,
+                    PodcastTitle = title,
+                    Title = newlyReleaseTitle,
+                    DownloadUrl = item.EnclosureUrl,
+                    FileName = BuildFileName(title, dt, newlyReleaseTitle, item.EnclosureUrl),
+                    Author = item.Author
+                             ?? item.ItunesAuthor
+                             ?? title,
+                    ImageUrl = item.ImageUrl ?? "null",
+                    Description = RemoveStripHtml(item.Description ?? "null"),
+                    PublishedUtc = dt,
+                });
+
+                Logger.Log.Info($"Get the newly release title is {newlyReleaseTitle}, time is {dt:G}.");
             }
+
+            result.Success = true;
+            return result;
         }
 
-        public void BuildPodcastDownloadFile(DateTime dateTime, string downloadDirectory, bool isSimpleFile, string downloadProgram, ref FileStream fs)
+        public void BuildPodcastDownloadFile(DateTime dateTime, string downloadDirectory, bool isSimpleFile,
+            string downloadProgram, ref FileStream fs)
         {
-            XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(_fileName);
+            ParsedFeed feed = LoadFeed();
 
-            var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
-            nsmgr.AddNamespace("itunes", "http://www.itunes.com/dtds/podcast-1.0.dtd");
+            EnsureChannel(feed);
 
-            var root = xmlDoc.DocumentElement;
+            string title = feed.Title ?? Name;
 
-            XmlNode channel = root.SelectSingleNode("channel");
-
-            string title = channel.SelectSingleNode("title").InnerText;
-
-            XmlNodeList nodeList = channel.ChildNodes;
-
-            for (int i = 0; i < nodeList.Count; i++)
+            foreach (ParsedItem item in feed.Items)
             {
-                if (nodeList[i].Name == "item")
+                if (!item.PublishedUtc.HasValue)
                 {
-                    string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
-                    DateTime dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
-
-                    if (dt > dateTime)
-                    {
-                        newlyReleasePubDate = dt.ToString("yyyy_MM_dd", DateTimeFormatInfo.InvariantInfo);
-
-                        string newlyReleaseTitle =
-                            nodeList[i].SelectSingleNode("title").InnerText.Trim();
-                        string newlyReleaseDownloadUrl =
-                            nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
-
-                        Logger.Log.Info($"Get the newly release title is {newlyReleaseTitle}, time is {dt.ToString("G")}.");
-
-                        if (isSimpleFile)
-                        {
-                            FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
-                        }
-                        else
-                        {
-                            string fileExtension = ".mp3";
-                            if (newlyReleaseDownloadUrl.Contains(".m4a"))
-                            {
-                                fileExtension = ".m4a";
-                            }
-
-                            string fileName = GetValidName($"{title} - {newlyReleasePubDate} - {newlyReleaseTitle}{fileExtension}");
-                            if (downloadProgram == DownloadTools.Aria2Name)
-                            {
-                                FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
-                                FileTools.AddText(fs, $"\tdir={downloadDirectory}\n");
-                                FileTools.AddText(fs, $"\tout={fileName}\n");
-                            }
-                            else if (downloadProgram == DownloadTools.IdmName)
-                            {
-                                FileTools.AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{downloadDirectory}\" /f \"{fileName}\"\n");
-                            }
-
-                            string author = nodeList[i].SelectSingleNode("author") != null
-                                ? nodeList[i].SelectSingleNode("author").InnerText
-                                : nodeList[i].SelectSingleNode("itunes:author", nsmgr) != null
-                                    ? nodeList[i].SelectSingleNode("itunes:author", nsmgr).InnerText
-                                    : "None";
-
-                            string imageUrl = nodeList[i].SelectSingleNode("itunes:image", nsmgr) != null
-                                ? nodeList[i].SelectSingleNode("itunes:image", nsmgr).Attributes["href"].Value
-                                : channel.SelectSingleNode("itunes:image", nsmgr).InnerText;
-
-                            string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
-
-                            string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + Path.DirectorySeparatorChar
-                            +
-                                                     fileName + ".metadata";
-                            AudioMetadata.CreateAudioMetadata(metadataFilePath, title, newlyReleaseTitle, author, imageUrl, description,
-                                dt);
-                        }
-                    }
+                    Logger.Log.Warn($"{Name}: an item without a readable pubDate was skipped.");
+                    continue;
                 }
+
+                DateTime dt = item.PublishedUtc.Value;
+
+                if (dt <= dateTime)
+                {
+                    continue;
+                }
+
+                string newlyReleaseTitle = (item.Title ?? string.Empty).Trim();
+
+                if (string.IsNullOrEmpty(item.EnclosureUrl))
+                {
+                    continue;
+                }
+
+                Logger.Log.Info($"Get the newly release title is {newlyReleaseTitle}, time is {dt:G}.");
+
+                if (isSimpleFile)
+                {
+                    FileTools.AddText(fs, $"{item.EnclosureUrl}\n");
+                    continue;
+                }
+
+                string fileName = BuildFileName(title, dt, newlyReleaseTitle, item.EnclosureUrl);
+
+                AppendDownloadEntry(fs, downloadProgram, downloadDirectory, item.EnclosureUrl, fileName);
+
+                WriteMetadata(downloadDirectory, new NewlyRelease
+                {
+                    PodcastName = Name,
+                    PodcastTitle = title,
+                    Title = newlyReleaseTitle,
+                    DownloadUrl = item.EnclosureUrl,
+                    FileName = fileName,
+                    Author = item.Author
+                             ?? item.ItunesAuthor
+                             ?? "None",
+                    ImageUrl = item.ImageUrl ?? "null",
+                    Description = RemoveStripHtml(item.Description ?? "null"),
+                    PublishedUtc = dt,
+                });
             }
         }
 
         public void GetPodcastAllReleaseDetail(ref IOutput output)
         {
-            XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(_fileName);
+            ParsedFeed feed = LoadFeed();
 
-            var root = xmlDoc.DocumentElement;
+            EnsureChannel(feed);
 
-            XmlNode channel = root.SelectSingleNode("channel");
-
-            XmlNodeList nodeList = channel.ChildNodes;
-
-            for (int i = 0; i < nodeList.Count; i++)
+            foreach (ParsedItem item in feed.Items)
             {
-                if (nodeList[i].Name == "item")
-                {
-                    string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
-                    DateTime dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
+                string newlyReleaseTitle = (item.Title ?? string.Empty).Trim();
 
-                    string newlyReleaseTitle =
-                        nodeList[i].SelectSingleNode("title").InnerText.Trim();
+                string newlyReleasePubDate = item.PublishedUtc.HasValue
+                    ? item.PublishedUtc.Value.ToString("G")
+                    : "unknown";
 
-                    newlyReleasePubDate = dt.ToString("G");
-
-                    string showString = $"* {newlyReleaseTitle} - {newlyReleasePubDate}";
-
-                    output.WriteLine(showString);
-                }
+                output.WriteLine($"* {newlyReleaseTitle} - {newlyReleasePubDate}");
             }
         }
 
-        public void DownloadSelectIndexRelease(int[] selectIndex, string downloadDirectory, bool isSimpleFile, string downloadProgram, ref FileStream fs)
+        public int DownloadSelectIndexRelease(int[] selectIndex, string downloadDirectory, bool isSimpleFile,
+            string downloadProgram, ref FileStream fs)
         {
-            XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(_fileName);
+            ParsedFeed feed = LoadFeed();
 
-            var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
-            nsmgr.AddNamespace("itunes", "http://www.itunes.com/dtds/podcast-1.0.dtd");
+            EnsureChannel(feed);
 
-            var root = xmlDoc.DocumentElement;
-
-            XmlNode channel = root.SelectSingleNode("channel");
-
-            string title = channel.SelectSingleNode("title").InnerText;
-
-            XmlNodeList nodeList = channel.ChildNodes;
+            string title = feed.Title ?? Name;
 
             int index = 0;
+            int writtenCount = 0;
 
-            for (int i = 0; i < nodeList.Count; i++)
+            foreach (ParsedItem item in feed.Items)
             {
-                if (nodeList[i].Name == "item")
+                index++;
+
+                if (!selectIndex.Contains(index))
                 {
-                    index++;
-                    if (selectIndex.Contains(index))
-                    {
-                        string newlyReleasePubDate = nodeList[i].SelectSingleNode("pubDate").InnerText;
-                        DateTime dt = DateTime.Parse(newlyReleasePubDate).ToUniversalTime();
-
-                        newlyReleasePubDate = dt.ToString("yyyy_MM_dd", DateTimeFormatInfo.InvariantInfo);
-
-                        string newlyReleaseTitle = nodeList[i].SelectSingleNode("title").InnerText.Trim();
-                        string newlyReleaseDownloadUrl = nodeList[i].SelectSingleNode("enclosure").Attributes["url"].Value;
-
-                        Logger.Log.Info($"Get the release title is {newlyReleaseTitle}, time is {dt.ToString("G")}.");
-
-                        if (isSimpleFile)
-                        {
-                            FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
-                        }
-                        else
-                        {
-                            string fileExtension = ".mp3";
-                            if (newlyReleaseDownloadUrl.Contains(".m4a"))
-                            {
-                                fileExtension = ".m4a";
-                            }
-
-                            string fileName = GetValidName($"{title} - {newlyReleasePubDate} - {newlyReleaseTitle}{fileExtension}");
-                            if (downloadProgram == DownloadTools.Aria2Name)
-                            {
-                                FileTools.AddText(fs, $"{newlyReleaseDownloadUrl}\n");
-                                FileTools.AddText(fs, $"\tdir={downloadDirectory}\n");
-                                FileTools.AddText(fs, $"\tout={fileName}\n");
-                            }
-                            else if (downloadProgram == DownloadTools.IdmName)
-                            {
-                                FileTools.AddText(fs, $"/a /d \"{newlyReleaseDownloadUrl}\" /p \"{downloadDirectory}\" /f \"{fileName}\"\n");
-                            }
-
-                            string author = nodeList[i].SelectSingleNode("author") != null
-                                ? nodeList[i].SelectSingleNode("author").InnerText
-                                : nodeList[i].SelectSingleNode("itunes:author", nsmgr).InnerText;
-
-                            string imageUrl = "null";
-                            if (nodeList[i].SelectSingleNode("itunes:image", nsmgr) != null)
-                            {
-                                imageUrl = nodeList[i].SelectSingleNode("itunes:image", nsmgr).Attributes["href"].Value;
-                            }
-
-                            string description = RemoveStripHtml(nodeList[i].SelectSingleNode("description").InnerText);
-
-                            string metadataFilePath = ProgramConfiguration.DownloadConfigurations.DownloadPodcastPath + Path.DirectorySeparatorChar +
-                                                      fileName + ".metadata";
-                            AudioMetadata.CreateAudioMetadata(metadataFilePath, title, newlyReleaseTitle, author, imageUrl, description,
-                                dt);
-                        }
-                    }
+                    continue;
                 }
+
+                if (!item.PublishedUtc.HasValue)
+                {
+                    Logger.Log.Warn($"{Name}: release {index} has no readable pubDate, skipped.");
+                    continue;
+                }
+
+                DateTime dt = item.PublishedUtc.Value;
+                string newlyReleaseTitle = (item.Title ?? string.Empty).Trim();
+
+                if (string.IsNullOrEmpty(item.EnclosureUrl))
+                {
+                    Logger.Log.Warn($"{Name}: release {index} has no enclosure url, skipped.");
+                    continue;
+                }
+
+                Logger.Log.Info($"Get the release title is {newlyReleaseTitle}, time is {dt:G}.");
+
+                if (isSimpleFile)
+                {
+                    FileTools.AddText(fs, $"{item.EnclosureUrl}\n");
+                    writtenCount++;
+                    continue;
+                }
+
+                string fileName = BuildFileName(title, dt, newlyReleaseTitle, item.EnclosureUrl);
+
+                AppendDownloadEntry(fs, downloadProgram, downloadDirectory, item.EnclosureUrl, fileName);
+                writtenCount++;
+
+                WriteMetadata(downloadDirectory, new NewlyRelease
+                {
+                    PodcastName = Name,
+                    PodcastTitle = title,
+                    Title = newlyReleaseTitle,
+                    DownloadUrl = item.EnclosureUrl,
+                    FileName = fileName,
+                    Author = item.Author
+                             ?? item.ItunesAuthor
+                             ?? "None",
+                    ImageUrl = item.ImageUrl ?? "null",
+                    Description = RemoveStripHtml(item.Description ?? "null"),
+                    PublishedUtc = dt,
+                });
+            }
+
+            return writtenCount;
+        }
+
+        /// <summary>
+        /// Writes the metadata sidecar that 'pdlm autometadata' later turns into audio tags.
+        /// </summary>
+        internal static void WriteMetadata(string downloadDirectory, NewlyRelease release)
+        {
+            try
+            {
+                string metadataFilePath = Path.Combine(downloadDirectory, $"{release.FileName}.metadata");
+
+                AudioMetadata.CreateAudioMetadata(metadataFilePath, release.PodcastTitle, release.Title,
+                    release.Author, release.ImageUrl, release.Description, release.PublishedUtc);
+            }
+            catch (Exception e)
+            {
+                Logger.Log.Error($"Create metadata of \"{release.FileName}\" failed. Exception is {e}");
             }
         }
 
-        private string RemoveStripHtml(string strHtml)
+        /// <summary>
+        /// Appends one download job for <paramref name="downloadProgram"/> to the download list.
+        /// </summary>
+        internal static void AppendDownloadEntry(FileStream fs, string downloadProgram, string downloadDirectory,
+            string downloadUrl, string fileName)
         {
-            string stringOutput = strHtml;
-            Regex regex = new Regex(@"<[^>]+>|</[^>]+>");
-            stringOutput = regex.Replace(stringOutput, "");
-            return stringOutput;
+            if (downloadProgram == DownloadTools.Aria2Name)
+            {
+                FileTools.AddText(fs, $"{downloadUrl}\n");
+                FileTools.AddText(fs, $"\tdir={downloadDirectory}\n");
+                FileTools.AddText(fs, $"\tout={fileName}\n");
+            }
+            else if (downloadProgram == DownloadTools.IdmName)
+            {
+                FileTools.AddText(fs,
+                    $"/a /d \"{downloadUrl}\" /p \"{downloadDirectory}\" /f \"{fileName}\"\n");
+            }
+        }
+
+        private static string BuildFileName(string podcastTitle, DateTime publishedUtc, string releaseTitle,
+            string downloadUrl)
+        {
+            string published = publishedUtc.ToString("yyyy_MM_dd", DateTimeFormatInfo.InvariantInfo);
+
+            return GetValidName($"{podcastTitle} - {published} - {releaseTitle}{GetFileExtension(downloadUrl)}");
+        }
+
+        private static string GetFileExtension(string downloadUrl)
+        {
+            return downloadUrl.Contains(".m4a", StringComparison.OrdinalIgnoreCase) ? ".m4a" : ".mp3";
+        }
+
+        /// <summary>
+        /// A feed without a channel is not a usable podcast feed; fail instead of reporting an empty
+        /// success.
+        /// </summary>
+        private static void EnsureChannel(ParsedFeed feed)
+        {
+            if (!feed.HasChannel)
+            {
+                throw new InvalidDataException("The xml file does not have a 'channel' node.");
+            }
+        }
+
+        /// <summary>
+        /// Reads the cached feed once and keeps the fields the program uses. The XML is streamed
+        /// element by element, so items that are never needed do not stay in memory as a DOM.
+        /// </summary>
+        private ParsedFeed LoadFeed()
+        {
+            return _feed ?? (_feed = ParseFeed());
+        }
+
+        private ParsedFeed ParseFeed()
+        {
+            var feed = new ParsedFeed();
+
+            using var reader = XmlReader.Create(_fileName, FeedReaderSettings);
+
+            bool inChannel = false;
+
+            while (reader.Read())
+            {
+                if (reader.NodeType == XmlNodeType.EndElement)
+                {
+                    if (inChannel && reader.Depth == 1 && reader.NamespaceURI.Length == 0
+                        && reader.LocalName == "channel")
+                    {
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if (reader.NodeType != XmlNodeType.Element)
+                {
+                    continue;
+                }
+
+                if (!inChannel)
+                {
+                    if (reader.Depth == 1 && reader.NamespaceURI.Length == 0 && reader.LocalName == "channel")
+                    {
+                        inChannel = true;
+                        feed.HasChannel = true;
+                    }
+
+                    continue;
+                }
+
+                if (reader.Depth != 2 || reader.NamespaceURI.Length != 0)
+                {
+                    continue;
+                }
+
+                switch (reader.LocalName)
+                {
+                    case "title":
+                        feed.Title = ReadElement(reader).Value;
+                        break;
+                    case "description":
+                        feed.Description = ReadElement(reader).Value;
+                        break;
+                    case "item":
+                        feed.Items.Add(ToParsedItem(ReadElement(reader)));
+                        break;
+                }
+            }
+
+            return feed;
+        }
+
+        private static XElement ReadElement(XmlReader reader)
+        {
+            using XmlReader subtree = reader.ReadSubtree();
+
+            return XElement.Load(subtree);
+        }
+
+        private static ParsedItem ToParsedItem(XElement item)
+        {
+            DateTime? publishedUtc = null;
+
+            if (TryParseUtc((string)item.Element("pubDate"), out DateTime dt))
+            {
+                publishedUtc = dt;
+            }
+
+            return new ParsedItem
+            {
+                Title = (string)item.Element("title"),
+                Description = (string)item.Element("description"),
+                Author = (string)item.Element("author"),
+                ItunesAuthor = (string)item.Element(Itunes + "author"),
+                ImageUrl = (string)item.Element(Itunes + "image")?.Attribute("href"),
+                EnclosureUrl = (string)item.Element("enclosure")?.Attribute("url"),
+                PublishedUtc = publishedUtc,
+            };
+        }
+
+        private static bool TryParseUtc(string value, out DateTime utc)
+        {
+            utc = default;
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            if (!DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AllowWhiteSpaces, out DateTimeOffset parsed))
+            {
+                return false;
+            }
+
+            utc = parsed.UtcDateTime;
+            return true;
+        }
+
+        private static string RemoveStripHtml(string strHtml)
+        {
+            return Regex.Replace(strHtml, @"<[^>]+>", string.Empty);
         }
 
         private static string GetValidName(string name)
         {
-            string regexSearch = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
-            Regex r = new Regex(string.Format("[{0}]", Regex.Escape(regexSearch)));
-            return r.Replace(name, "");
+            string invalidChars = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
+
+            return Regex.Replace(name, $"[{Regex.Escape(invalidChars)}]", string.Empty);
+        }
+
+        private static void TryDeleteFile(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+
+        private sealed class ParsedFeed
+        {
+            public bool HasChannel;
+
+            public string Title;
+
+            public string Description;
+
+            public readonly List<ParsedItem> Items = new List<ParsedItem>();
+        }
+
+        private sealed class ParsedItem
+        {
+            public string Title;
+
+            public string Description;
+
+            public string Author;
+
+            public string ItunesAuthor;
+
+            public string ImageUrl;
+
+            public string EnclosureUrl;
+
+            public DateTime? PublishedUtc;
         }
     }
 }
