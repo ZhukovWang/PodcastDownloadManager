@@ -22,6 +22,9 @@ namespace PodcastDownloadManager.Tests.Support
 
         private readonly ConcurrentDictionary<string, Route> _routes = new ConcurrentDictionary<string, Route>();
 
+        private readonly ConcurrentDictionary<string, string> _userAgents =
+            new ConcurrentDictionary<string, string>();
+
         private readonly int _port;
 
         public FakeFeedServer()
@@ -67,6 +70,14 @@ namespace PodcastDownloadManager.Tests.Support
         public int Hits(string path)
         {
             return _routes.TryGetValue(Normalize(path), out Route route) ? route.Hits : 0;
+        }
+
+        /// <summary>
+        /// The User-Agent header of the most recent request for <paramref name="path"/>.
+        /// </summary>
+        public string UserAgentFor(string path)
+        {
+            return _userAgents.TryGetValue(Normalize(path), out string userAgent) ? userAgent : null;
         }
 
         public void Dispose()
@@ -116,12 +127,18 @@ namespace PodcastDownloadManager.Tests.Support
                         return;
                     }
 
-                    while (!string.IsNullOrEmpty(await reader.ReadLineAsync(token)))
-                    {
-                    }
-
                     string[] parts = requestLine.Split(' ');
                     string path = Normalize(parts.Length > 1 ? parts[1].Split('?')[0] : "/");
+
+                    while (await reader.ReadLineAsync(token) is { } headerLine && !string.IsNullOrEmpty(headerLine))
+                    {
+                        const string prefix = "User-Agent:";
+
+                        if (headerLine.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            _userAgents[path] = headerLine.Substring(prefix.Length).Trim();
+                        }
+                    }
 
                     int status;
                     string body;

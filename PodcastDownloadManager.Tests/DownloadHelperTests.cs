@@ -35,6 +35,23 @@ namespace PodcastDownloadManager.Tests
         }
 
         [Fact]
+        public async Task Sends_a_user_agent_that_is_not_blocked_by_cdn_ua_blacklists()
+        {
+            _server.Serve("feed.xml", "body");
+
+            await DownloadHelper.DownloadFileAsync(_server.Url("feed.xml"),
+                Path.Combine(_workspace.Root, "f.xml"), TestContext.Current.CancellationToken);
+
+            string userAgent = _server.UserAgentFor("feed.xml");
+
+            Assert.StartsWith("PodcastDownloadManager/", userAgent);
+
+            // feed.xyzfm.space (小宇宙) answers 403 "denied by UA ACL = blacklist" to any
+            // User-Agent that contains "github.com", so the project URL must stay out of it.
+            Assert.DoesNotContain("github.com", userAgent, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
         public async Task Creates_the_parent_directory()
         {
             _server.Serve("feed.xml", "body");

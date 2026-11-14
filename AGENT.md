@@ -153,7 +153,7 @@ written, and (for `upgrade`) the pending list, which is only deleted when the do
 
 ## Testing
 
-- `PodcastDownloadManager.Tests` — 77 tests, no network: feeds are served by `Support/FakeFeedServer.cs`
+- `PodcastDownloadManager.Tests` — 78 tests, no network: feeds are served by `Support/FakeFeedServer.cs`
   (a `TcpListener` on loopback), and `Support/TestWorkspace.cs` points every `ProgramConfiguration` path
   at a fresh temp directory per test.
 - `ExitCodeTests` drives `Program.Main` end to end and asserts the process-level result; keep it in sync
@@ -219,7 +219,11 @@ written, and (for `upgrade`) the pending list, which is only deleted when the do
     `null` for an omitted option, so only the values the user actually supplied are validated. Do not
     add `RegisterOption(..., defaultValue)` back: then `pdlm config -ft 60` would also revalidate an
     untouched but invalid path or downloader and fail.
-13. **The `download` cutoff date is local midnight converted to UTC.**
+13. **Do not put `github.com` in the feed User-Agent.** `feed.xyzfm.space` (小宇宙) sits behind a
+    Tengine WAF whose UA ACL blacklist rejects any User-Agent containing `github.com` with
+    `403 denied by UA ACL = blacklist`. `DownloadHelperTests` pins a UA without it; other hosts are
+    fine with the descriptive UA, and empty/curl/browser UAs also work there.
+14. **The `download` cutoff date is local midnight converted to UTC.**
     `DownloadCommand.TryParseDate` uses `DateTime.SpecifyKind(..., Local).ToUniversalTime()` before
     comparing with the UTC `pubDate` values. Any new date input must do the same.
 

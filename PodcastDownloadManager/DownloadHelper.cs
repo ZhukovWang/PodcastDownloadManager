@@ -56,8 +56,10 @@ public static class DownloadHelper
             Timeout = Timeout.InfiniteTimeSpan,
         };
 
-        client.DefaultRequestHeaders.UserAgent.ParseAdd(
-            "PodcastDownloadManager/1.0 (+https://github.com/ZhukovWang/PodcastDownloadManager)");
+        // Keep a real, descriptive User-Agent (a lot of CDNs answer 403 without one), but do not
+        // put the project URL in it. feed.xyzfm.space (小宇宙) has a UA blacklist that rejects
+        // any User-Agent containing "github.com" with 403 "denied by UA ACL = blacklist".
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("PodcastDownloadManager/1.0 (RSS reader)");
         client.DefaultRequestHeaders.Accept.ParseAdd(
             "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, */*;q=0.5");
 
